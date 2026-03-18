@@ -29,7 +29,10 @@ class UserRepositoryImpl implements UserRepository {
     };
     return api.post('/sales-users', body: body).then((data) {
       if (data is Map<String, dynamic>) {
-        return UserModel.fromJson(data);
+        final node = (data['data'] is Map<String, dynamic>)
+            ? data['data'] as Map<String, dynamic>
+            : data;
+        return UserModel.fromJson(node);
       }
       return UserModel(
         id: user.id,

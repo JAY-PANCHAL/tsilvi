@@ -40,7 +40,7 @@ class LoginScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       const Text(
-                        'Welcome to Tsilvi',
+                        'Welcome to Tsilivi',
                         style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w600,

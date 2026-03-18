@@ -7,17 +7,17 @@ import 'routes/app_routes.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const TsilviApp());
+  runApp(const TsiliviApp());
 }
 
-class TsilviApp extends StatelessWidget {
-  const TsilviApp({super.key});
+class TsiliviApp extends StatelessWidget {
+  const TsiliviApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Tsilvi Sales',
+      title: 'Tsilivi Sales',
       theme: AppTheme.lightTheme,
       initialBinding: AppBindings(),
       initialRoute: AppRoutes.splash,

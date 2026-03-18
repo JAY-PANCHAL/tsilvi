@@ -22,9 +22,12 @@ class UsersController extends GetxController {
 
   Future<void> fetchUsers() async {
     isLoading.value = true;
-    final data = await repository.fetchUsers(query: query.value);
-    users.assignAll(data);
-    isLoading.value = false;
+    try {
+      final data = await repository.fetchUsers(query: query.value);
+      users.assignAll(data);
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   void updateQuery(String value) {
@@ -34,8 +37,18 @@ class UsersController extends GetxController {
 
   Future<UserEntity> addUser(UserEntity user) async {
     final created = await repository.addUser(user);
-    users.insert(0, created);
-    return created;
+    await fetchUsers();
+    final refreshed = users.firstWhereOrNull(
+      (u) =>
+          (created.id.isNotEmpty && u.id == created.id) ||
+          (created.mobile.isNotEmpty && u.mobile == created.mobile) ||
+          (created.email.isNotEmpty && u.email == created.email),
+    );
+    final resolved = refreshed ?? created;
+    if (refreshed == null) {
+      users.insert(0, resolved);
+    }
+    return resolved;
   }
 
   void selectUser(UserEntity user) {

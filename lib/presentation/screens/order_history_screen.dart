@@ -12,8 +12,19 @@ import '../widgets/gradient_background.dart';
 import '../widgets/pressable_scale.dart';
 import '../widgets/shimmer_loader.dart';
 
-class OrderHistoryScreen extends StatelessWidget {
+class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
+
+  @override
+  State<OrderHistoryScreen> createState() => _OrderHistoryScreenState();
+}
+
+class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Get.find<OrdersController>().fetchOrders();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,20 +67,31 @@ class OrderHistoryScreen extends StatelessWidget {
                         itemBuilder: (_, __) => const ShimmerListTile(),
                       );
                     }
-                    return ListView.separated(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: controller.orders.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 16),
-                      itemBuilder: (context, index) {
-                        final order = controller.orders[index];
-                        return _OrderCard(
-                          order: order,
-                          onTap: () => Get.toNamed(
-                            AppRoutes.orderDetail,
-                            arguments: order,
-                          ),
-                        );
-                      },
+                    if (controller.orders.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'No orders yet',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      );
+                    }
+                    return RefreshIndicator(
+                      onRefresh: controller.fetchOrders,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(20),
+                        itemCount: controller.orders.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 16),
+                        itemBuilder: (context, index) {
+                          final order = controller.orders[index];
+                          return _OrderCard(
+                            order: order,
+                            onTap: () => Get.toNamed(
+                              AppRoutes.orderDetail,
+                              arguments: order,
+                            ),
+                          );
+                        },
+                      ),
                     );
                   },
                 ),

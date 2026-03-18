@@ -59,24 +59,9 @@ class InventoryDetailSheet extends StatelessWidget {
                         ),
                       ]
                     : item.images.map((image) {
-                        return GestureDetector(
-                          onTap: () =>
-                              Get.toNamed(AppRoutes.gallery, arguments: item),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(18),
-                            child: Image.network(
-                              image,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                width: double.infinity,
-                                color: Colors.white12,
-                                alignment: Alignment.center,
-                                child: const Icon(Icons.image_not_supported,
-                                    color: Colors.white54, size: 48),
-                              ),
-                            ),
-                          ),
+                        return _ZoomableImage(
+                          image: image,
+                          item: item,
                         );
                       }).toList(),
               ),
@@ -126,6 +111,74 @@ class InventoryDetailSheet extends StatelessWidget {
                 },
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ZoomableImage extends StatefulWidget {
+  final String image;
+  final InventoryEntity item;
+
+  const _ZoomableImage({required this.image, required this.item});
+
+  @override
+  State<_ZoomableImage> createState() => _ZoomableImageState();
+}
+
+class _ZoomableImageState extends State<_ZoomableImage> {
+  late final ImageStream _stream;
+  ImageStreamListener? _listener;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _stream = NetworkImage(widget.image).resolve(const ImageConfiguration());
+    _listener = ImageStreamListener(
+      (_, __) {
+        if (mounted && _hasError) {
+          setState(() => _hasError = false);
+        }
+      },
+      onError: (_, __) {
+        if (mounted && !_hasError) {
+          setState(() => _hasError = true);
+        }
+      },
+    );
+    _stream.addListener(_listener!);
+  }
+
+  @override
+  void dispose() {
+    if (_listener != null) {
+      _stream.removeListener(_listener!);
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canZoom = !_hasError;
+    return GestureDetector(
+      onTap: canZoom
+          ? () => Get.toNamed(AppRoutes.gallery, arguments: widget.item)
+          : null,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Image.network(
+          widget.image,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            width: double.infinity,
+            color: Colors.white12,
+            alignment: Alignment.center,
+            child: const Icon(Icons.image_not_supported,
+                color: Colors.white54, size: 48),
           ),
         ),
       ),

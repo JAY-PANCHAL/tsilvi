@@ -37,6 +37,13 @@ class OrderRepositoryImpl implements OrderRepository {
       return data.whereType<Map<String, dynamic>>().toList();
     }
     if (data is Map<String, dynamic>) {
+      final dataNode = data['data'];
+      if (dataNode is Map<String, dynamic>) {
+        final nested = dataNode['items'] ?? dataNode['orders'];
+        if (nested is List) {
+          return nested.whereType<Map<String, dynamic>>().toList();
+        }
+      }
       final list = data['data'] ?? data['items'] ?? data['orders'];
       if (list is List) {
         return list.whereType<Map<String, dynamic>>().toList();

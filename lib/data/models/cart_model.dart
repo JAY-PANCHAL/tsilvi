@@ -9,11 +9,15 @@ class CartModel extends CartItemEntity {
   }) : super(item: item, quantity: quantity, cartItemId: cartItemId);
 
   factory CartModel.fromJson(Map<String, dynamic> json) {
+    final quantityRaw = json['quantity'] ?? json['qty'] ?? json['count'] ?? 1;
+    final quantity = quantityRaw is num
+        ? quantityRaw.toInt()
+        : int.tryParse(quantityRaw.toString()) ?? 1;
     return CartModel(
       cartItemId: json['cartItemId']?.toString() ?? json['id']?.toString(),
       item: InventoryModel.fromJson(
           (json['item'] ?? json['product'] ?? json) as Map<String, dynamic>),
-      quantity: (json['quantity'] ?? 1) as int,
+      quantity: quantity,
     );
   }
 

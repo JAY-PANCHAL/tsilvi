@@ -1,4 +1,5 @@
 import '../../domain/entities/cart_item_entity.dart';
+import '../../domain/entities/cart_summary_entity.dart';
 import '../../domain/entities/inventory_entity.dart';
 import '../../domain/repositories/cart_repository.dart';
 import '../datasources/api_service.dart';
@@ -10,10 +11,22 @@ class CartRepositoryImpl implements CartRepository {
   CartRepositoryImpl(this.api);
 
   @override
-  Future<List<CartItemEntity>> fetchCart() async {
+  Future<CartSummaryEntity> fetchCart() async {
     final data = await api.get('/cart');
     final list = _extractList(data);
-    return list.map((e) => CartModel.fromJson(e)).toList();
+    final items = list.map((e) => CartModel.fromJson(e)).toList();
+    final summary = _extractSummary(data);
+    return CartSummaryEntity(
+      items: items,
+      subtotal: summary.subtotal,
+      productDiscountTotal: summary.productDiscountTotal,
+      couponDiscount: summary.couponDiscount,
+      taxAmount: summary.taxAmount,
+      shippingAmount: summary.shippingAmount,
+      grandTotal: summary.grandTotal,
+      isAuthenticated: summary.isAuthenticated,
+      appliedCouponCode: summary.appliedCouponCode,
+    );
   }
 
   @override
@@ -58,5 +71,32 @@ class CartRepositoryImpl implements CartRepository {
       }
     }
     return [];
+  }
+
+  CartSummaryEntity _extractSummary(dynamic data) {
+    Map<String, dynamic> node = {};
+    if (data is Map<String, dynamic>) {
+      final dataNode = data['data'];
+      if (dataNode is Map<String, dynamic>) {
+        node = dataNode;
+      }
+    }
+    double toDouble(dynamic v) {
+      if (v is num) return v.toDouble();
+      if (v is String) return double.tryParse(v) ?? 0;
+      return 0;
+    }
+
+    return CartSummaryEntity(
+      items: const [],
+      subtotal: toDouble(node['subtotal']),
+      productDiscountTotal: toDouble(node['productDiscountTotal']),
+      couponDiscount: toDouble(node['couponDiscount']),
+      taxAmount: toDouble(node['taxAmount']),
+      shippingAmount: toDouble(node['shippingAmount']),
+      grandTotal: toDouble(node['grandTotal']),
+      isAuthenticated: node['isAuthenticated'] as bool?,
+      appliedCouponCode: node['appliedCouponCode']?.toString(),
+    );
   }
 }

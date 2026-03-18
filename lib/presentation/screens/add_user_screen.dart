@@ -5,6 +5,7 @@ import '../../core/utils/app_colors.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../routes/app_routes.dart';
 import '../controllers/users_controller.dart';
+import '../../core/utils/toast.dart';
 import '../widgets/glass_button.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/gradient_background.dart';
@@ -21,6 +22,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
   final mobileController = TextEditingController();
   final businessController = TextEditingController();
   final emailController = TextEditingController();
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -107,14 +109,16 @@ class _AddUserScreenState extends State<AddUserScreen> {
                       ),
                       const SizedBox(height: 20),
                       GlassButton(
-                        label: 'Create User',
+                        label: _isSubmitting ? 'Creating...' : 'Create User',
                         onTap: () async {
+                          if (_isSubmitting) return;
                           if (nameController.text.trim().isEmpty ||
                               mobileController.text.trim().isEmpty) {
-                            Get.snackbar('Required',
-                                'Name and mobile number are required');
+                            showToast('Name and mobile number are required',
+                                success: false);
                             return;
                           }
+                          setState(() => _isSubmitting = true);
                           final user = UserEntity(
                             id: 'user_${DateTime.now().millisecondsSinceEpoch}',
                             name: nameController.text.trim(),
@@ -122,12 +126,20 @@ class _AddUserScreenState extends State<AddUserScreen> {
                             email:
                                 emailController.text.trim().isNotEmpty
                                     ? emailController.text.trim()
-                                    : '${nameController.text.trim().split(' ').first.toLowerCase()}@tsilvi.com',
+                                    : '${nameController.text.trim().split(' ').first.toLowerCase()}@tsilivi.com',
                             businessName: businessController.text.trim(),
                           );
-                          final created = await usersController.addUser(user);
-                          usersController.selectUser(created);
-                          Get.offNamed(AppRoutes.inventory);
+                          try {
+                            final created = await usersController.addUser(user);
+                            usersController.selectUser(created);
+                            if (Get.currentRoute != AppRoutes.inventory) {
+                              Get.offNamed(AppRoutes.inventory);
+                            }
+                          } finally {
+                            if (mounted) {
+                              setState(() => _isSubmitting = false);
+                            }
+                          }
                         },
                       )
                     ],
@@ -135,7 +147,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'This is mock API-ready. Replace with real API later.',
+                  'This uses the live API.',
                   style: TextStyle(color: AppColors.textSecondary),
                 ),
               ],

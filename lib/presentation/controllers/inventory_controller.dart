@@ -6,6 +6,7 @@ import '../../core/utils/app_storage.dart';
 import '../../core/utils/toast.dart';
 import '../../domain/entities/category_entity.dart';
 import '../../domain/entities/inventory_entity.dart';
+import '../../domain/repositories/category_repository.dart';
 import '../../domain/repositories/inventory_repository.dart';
 import 'cart_controller.dart';
 
@@ -43,7 +44,16 @@ class InventoryController extends GetxController {
   }
 
   Future<void> _loadCategories() async {
-    final data = await AppStorage.getCategories();
+    var data = await AppStorage.getCategories();
+    if (data.isEmpty) {
+      try {
+        final repo = Get.find<CategoryRepository>();
+        data = await repo.fetchCollections();
+        if (data.isNotEmpty) {
+          await AppStorage.setCategories(data);
+        }
+      } catch (_) {}
+    }
     categories.assignAll(data);
     if (categories.isNotEmpty) {
       selectedCategory.value ??= categories.first;
@@ -60,30 +70,40 @@ class InventoryController extends GetxController {
     }
     isLoading.value = true;
     page.value = 1;
-    final data = await repository.fetchInventory(
-      page: page.value,
-      limit: AppConstants.pageSize,
-      query: query.value,
-      category: category,
-    );
-    items.assignAll(data);
-    hasMore.value = data.length == AppConstants.pageSize;
-    isLoading.value = false;
+    try {
+      final data = await repository.fetchInventory(
+        page: page.value,
+        limit: AppConstants.pageSize,
+        query: query.value,
+        category: category,
+      );
+      items.assignAll(data);
+      hasMore.value = data.length == AppConstants.pageSize;
+    } catch (e) {
+      showToast('Failed to load items', success: false);
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   Future<void> loadMore() async {
     if (isLoadingMore.value || !hasMore.value) return;
     isLoadingMore.value = true;
     page.value += 1;
-    final data = await repository.fetchInventory(
-      page: page.value,
-      limit: AppConstants.pageSize,
-      query: query.value,
-      category: selectedCategory.value?.slug ?? '',
-    );
-    items.addAll(data);
-    hasMore.value = data.length == AppConstants.pageSize;
-    isLoadingMore.value = false;
+    try {
+      final data = await repository.fetchInventory(
+        page: page.value,
+        limit: AppConstants.pageSize,
+        query: query.value,
+        category: selectedCategory.value?.slug ?? '',
+      );
+      items.addAll(data);
+      hasMore.value = data.length == AppConstants.pageSize;
+    } catch (e) {
+      showToast('Failed to load more items', success: false);
+    } finally {
+      isLoadingMore.value = false;
+    }
   }
 
   void updateQuery(String value) {

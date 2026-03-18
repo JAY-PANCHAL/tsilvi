@@ -1,12 +1,7 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
-import '../../core/utils/app_colors.dart';
-import '../controllers/inventory_controller.dart';
-import '../controllers/users_controller.dart';
-import '../widgets/customer_required_dialog.dart';
 import '../widgets/glass_button.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/gradient_background.dart';
@@ -20,29 +15,25 @@ class QrScannerScreen extends StatefulWidget {
 
 class _QrScannerScreenState extends State<QrScannerScreen>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
+  final MobileScannerController _scannerController =
+      MobileScannerController();
   final skuController = TextEditingController();
+  bool _isReturning = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _scannerController.dispose();
     skuController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final inventoryController = Get.find<InventoryController>();
-    final usersController = Get.find<UsersController>();
     return Scaffold(
       body: GradientBackground(
         child: SafeArea(
@@ -74,43 +65,25 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Container(
-                            height: 220,
-                            width: 220,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(
-                                  color: Colors.white24, width: 1.5),
-                            ),
-                          ),
-                          AnimatedBuilder(
-                            animation: _controller,
-                            builder: (context, child) {
-                              return Positioned(
-                                top: 20 + (160 * _controller.value),
-                                child: Container(
-                                  height: 2,
-                                  width: 180,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.accent.withOpacity(0.8),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.accent
-                                            .withOpacity(0.6),
-                                        blurRadius: 12,
-                                      )
-                                    ],
-                                  ),
-                                ),
-                              );
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: SizedBox(
+                          height: 240,
+                          width: double.infinity,
+                          child: MobileScanner(
+                            controller: _scannerController,
+                            onDetect: (capture) {
+                              if (_isReturning) return;
+                              final barcode = capture.barcodes.isNotEmpty
+                                  ? capture.barcodes.first
+                                  : null;
+                              final value = barcode?.rawValue ?? '';
+                              if (value.trim().isEmpty) return;
+                              _isReturning = true;
+                              Get.back(result: value.trim());
                             },
                           ),
-                          const Icon(Icons.qr_code_scanner,
-                              size: 64, color: Colors.white70),
-                        ],
+                        ),
                       ),
                       const SizedBox(height: 20),
                       TextField(
@@ -124,22 +97,14 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                       GlassButton(
                         label: 'Simulate Scan',
                         onTap: () async {
-                          if (!usersController.hasSelectedUser) {
-                            await showCustomerRequiredDialog();
-                            return;
-                          }
                           final sku = skuController.text.trim().isNotEmpty
                               ? skuController.text.trim()
-                              : _randomSku();
-                          await inventoryController.scanAndAddSku(sku);
-                          if (mounted) Get.back();
+                              : '';
+                          if (sku.isEmpty) return;
+                          if (mounted) Get.back(result: sku);
                         },
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        'Mock scanner is active',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      )
                     ],
                   ),
                 ),
@@ -149,10 +114,5 @@ class _QrScannerScreenState extends State<QrScannerScreen>
         ),
       ),
     );
-  }
-
-  String _randomSku() {
-    final random = Random();
-    return 'SKU-${1000 + random.nextInt(40)}';
   }
 }

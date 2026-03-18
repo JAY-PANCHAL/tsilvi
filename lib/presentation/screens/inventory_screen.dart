@@ -12,6 +12,7 @@ import '../controllers/users_controller.dart';
 import '../widgets/cart_icon_button.dart';
 import '../widgets/customer_required_dialog.dart';
 import '../widgets/fade_slide.dart';
+import '../widgets/glass_button.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/gradient_background.dart';
 import '../widgets/pressable_scale.dart';
@@ -31,8 +32,10 @@ class InventoryScreen extends StatelessWidget {
     return Scaffold(
       body: GradientBackground(
         child: SafeArea(
-          child: Column(
+          child: Stack(
             children: [
+              Column(
+                children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: Row(
@@ -52,25 +55,57 @@ class InventoryScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    IconButton(
-                      onPressed: () => Get.toNamed(AppRoutes.qrScanner),
-                      icon: const Icon(Icons.qr_code_scanner,
-                          color: Colors.white),
-                    ),
                     const CartIconButton(),
                   ],
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: TextField(
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                    hintText: 'Search by name or SKU',
-                    prefixIcon: Icon(Icons.search, color: Colors.white70),
-                  ),
-                  onChanged: controller.updateQuery,
-                  onSubmitted: controller.searchBySku,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'Search by name or SKU',
+                          prefixIcon:
+                              const Icon(Icons.search, color: Colors.white70),
+                          suffixIcon: IconButton(
+                            onPressed: () async {
+                              final result =
+                                  await Get.toNamed(AppRoutes.qrScanner);
+                              if (result is String && result.trim().isNotEmpty) {
+                                await controller.searchBySku(result.trim());
+                              }
+                            },
+                            icon: const Icon(Icons.qr_code_scanner,
+                                color: Colors.white70),
+                          ),
+                        ),
+                        onChanged: controller.updateQuery,
+                        onSubmitted: controller.searchBySku,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Obx(
+                      () {
+                        final user = usersController.selectedUser.value;
+                        return GestureDetector(
+                          onTap: () => Get.toNamed(AppRoutes.existingUsers),
+                          child: Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.person,
+                                color: Colors.white70, size: 20),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 12),
@@ -163,7 +198,7 @@ class InventoryScreen extends StatelessWidget {
                   () {
                     if (controller.isLoading.value) {
                       return GridView.builder(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: columns,
                           crossAxisSpacing: 16,
@@ -180,7 +215,7 @@ class InventoryScreen extends StatelessWidget {
                         onRefresh: controller.fetchInitial,
                         child: ListView(
                           controller: controller.scrollController,
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
                           children: const [
                             SizedBox(height: 80),
                             Center(
@@ -197,7 +232,7 @@ class InventoryScreen extends StatelessWidget {
                       onRefresh: controller.fetchInitial,
                       child: GridView.builder(
                         controller: controller.scrollController,
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: columns,
                           crossAxisSpacing: 16,
@@ -216,23 +251,58 @@ class InventoryScreen extends StatelessWidget {
                           final item = controller.items[index];
                           return FadeSlide(
                             index: index,
-                            child: _InventoryCard(
-                              item: item,
-                              onTap: () => _openDetail(item),
-                              onAdd: () async {
-                                if (!usersController.hasSelectedUser) {
-                                  await showCustomerRequiredDialog();
-                                  return;
-                                }
-                                await cartController.addItem(item);
-                              },
-                            ),
+                            child: Obx(() {
+                              final cartEntry =
+                                  cartController.findItem(item);
+                              final qty = cartEntry?.quantity ?? 0;
+                              return _InventoryCard(
+                                item: item,
+                                quantity: qty,
+                                onTap: () => _openDetail(item),
+                                onAdd: () async {
+                                  if (!usersController.hasSelectedUser) {
+                                    await showCustomerRequiredDialog();
+                                    return;
+                                  }
+                                  await cartController.addItem(item);
+                                },
+                                onIncrement: () async {
+                                  await cartController.increment(item);
+                                },
+                                onDecrement: () async {
+                                  await cartController.decrement(item);
+                                },
+                                onSetQuantity: (qty) =>
+                                    cartController.setQuantity(item, qty),
+                              );
+                            }),
                           );
                         },
                       ),
                     );
                   },
                 ),
+              ),
+                ],
+              ),
+              Obx(
+                () => cartController.items.isNotEmpty
+                    ? Positioned(
+                        left: 20,
+                        right: 20,
+                        bottom: 16,
+                        child: GlassButton(
+                          label: 'Go to Cart',
+                          onTap: () => Get.toNamed(AppRoutes.cart),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              Obx(
+                () => (controller.isLoading.value ||
+                        cartController.isUpdating.value)
+                    ? const _FullScreenLoader()
+                    : const SizedBox.shrink(),
               ),
             ],
           ),
@@ -250,114 +320,225 @@ class InventoryScreen extends StatelessWidget {
   }
 }
 
-class _InventoryCard extends StatelessWidget {
+class _FullScreenLoader extends StatelessWidget {
+  const _FullScreenLoader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black45,
+        alignment: Alignment.center,
+        child: const CircularProgressIndicator(color: Colors.white),
+      ),
+    );
+  }
+}
+class _InventoryCard extends StatefulWidget {
   final InventoryEntity item;
   final VoidCallback onTap;
   final VoidCallback onAdd;
+  final VoidCallback onIncrement;
+  final VoidCallback onDecrement;
+  final ValueChanged<int> onSetQuantity;
+  final int quantity;
 
   const _InventoryCard({
     required this.item,
     required this.onTap,
     required this.onAdd,
+    required this.onIncrement,
+    required this.onDecrement,
+    required this.onSetQuantity,
+    required this.quantity,
+  });
+
+  @override
+  State<_InventoryCard> createState() => _InventoryCardState();
+}
+
+class _InventoryCardState extends State<_InventoryCard> {
+  late final TextEditingController _qtyController;
+
+  @override
+  void initState() {
+    super.initState();
+    _qtyController =
+        TextEditingController(text: widget.quantity > 0 ? '${widget.quantity}' : '');
+  }
+
+  @override
+  void didUpdateWidget(covariant _InventoryCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.quantity != widget.quantity) {
+      _qtyController.text =
+          widget.quantity > 0 ? '${widget.quantity}' : '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _qtyController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PressableScale(
+      onTap: widget.onTap,
+      child: GlassContainer(
+        radius: 20,
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: widget.item.images.isNotEmpty
+                  ? Image.network(
+                      widget.item.images.first,
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 72,
+                        height: 72,
+                        color: Colors.white12,
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.image_not_supported,
+                            color: Colors.white54, size: 26),
+                      ),
+                    )
+                  : Container(
+                      width: 72,
+                      height: 72,
+                      color: Colors.white12,
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.image_not_supported,
+                          color: Colors.white54, size: 26),
+                    ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.item.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    widget.item.sku,
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    formatCurrency(
+                      widget.item.price,
+                      currency: widget.item.currency,
+                      fractionDigits: 0,
+                    ),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            widget.quantity > 0
+                ? _QtyControl(
+                    controller: _qtyController,
+                    onMinus: widget.onDecrement,
+                    onPlus: widget.onIncrement,
+                    onChanged: (value) {
+                      final qty = int.tryParse(value) ?? widget.quantity;
+                      widget.onSetQuantity(qty);
+                    },
+                  )
+                : Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      onPressed: widget.onAdd,
+                      icon: const Icon(
+                        Icons.add,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QtyControl extends StatelessWidget {
+  final TextEditingController controller;
+  final VoidCallback onMinus;
+  final VoidCallback onPlus;
+  final ValueChanged<String> onChanged;
+
+  const _QtyControl({
+    required this.controller,
+    required this.onMinus,
+    required this.onPlus,
+    required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final cartController = Get.find<CartController>();
-        return PressableScale(
-          onTap: onTap,
-          child: GlassContainer(
-            radius: 20,
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: item.images.isNotEmpty
-                      ? Image.network(
-                          item.images.first,
-                          width: 72,
-                          height: 72,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            width: 72,
-                            height: 72,
-                            color: Colors.white12,
-                            alignment: Alignment.center,
-                            child: const Icon(Icons.image_not_supported,
-                                color: Colors.white54, size: 26),
-                          ),
-                        )
-                      : Container(
-                          width: 72,
-                          height: 72,
-                          color: Colors.white12,
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.image_not_supported,
-                              color: Colors.white54, size: 26),
-                        ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        item.sku,
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        formatCurrency(
-                          item.price,
-                          currency: item.currency,
-                          fractionDigits: 0,
-                        ),
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Obx(
-                  () {
-                    final isAdded = cartController.items
-                        .any((element) => element.item.id == item.id);
-                    return Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        onPressed: onAdd,
-                        icon: Icon(
-                          isAdded ? Icons.check : Icons.add,
-                          color: isAdded ? Colors.greenAccent : Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            onPressed: onMinus,
+            icon: const Icon(Icons.remove, color: Colors.white70, size: 18),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            padding: EdgeInsets.zero,
+          ),
+          SizedBox(
+            width: 36,
+            child: TextField(
+              controller: controller,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(vertical: 4),
+                border: InputBorder.none,
+              ),
+              onChanged: onChanged,
             ),
           ),
-        );
-      }
-    }
+          IconButton(
+            onPressed: onPlus,
+            icon: const Icon(Icons.add, color: Colors.white70, size: 18),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            padding: EdgeInsets.zero,
+          ),
+        ],
+      ),
+    );
+  }
+}

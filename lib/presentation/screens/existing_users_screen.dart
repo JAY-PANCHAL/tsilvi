@@ -10,8 +10,19 @@ import '../widgets/gradient_background.dart';
 import '../widgets/pressable_scale.dart';
 import '../widgets/shimmer_loader.dart';
 
-class ExistingUsersScreen extends StatelessWidget {
+class ExistingUsersScreen extends StatefulWidget {
   const ExistingUsersScreen({super.key});
+
+  @override
+  State<ExistingUsersScreen> createState() => _ExistingUsersScreenState();
+}
+
+class _ExistingUsersScreenState extends State<ExistingUsersScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Get.find<UsersController>().fetchUsers();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +88,9 @@ class ExistingUsersScreen extends StatelessWidget {
                           user: user,
                           onTap: () {
                             usersController.selectUser(user);
-                            Get.offNamed(AppRoutes.inventory);
+                            if (Get.currentRoute != AppRoutes.inventory) {
+                              Get.offNamed(AppRoutes.inventory);
+                            }
                           },
                         );
                       },

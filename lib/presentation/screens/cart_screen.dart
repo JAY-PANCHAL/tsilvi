@@ -12,6 +12,7 @@ import '../widgets/glass_button.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/gradient_background.dart';
 import '../widgets/pressable_scale.dart';
+import '../widgets/customer_required_dialog.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -21,10 +22,19 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
+  bool _showDetails = false;
+
   @override
   void initState() {
     super.initState();
-    Get.find<CartController>().fetchCart();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final usersController = Get.find<UsersController>();
+      if (!usersController.hasSelectedUser) {
+        await showCustomerRequiredDialog();
+      } else {
+        await Get.find<CartController>().fetchCart();
+      }
+    });
   }
 
   @override
@@ -36,8 +46,10 @@ class _CartScreenState extends State<CartScreen> {
     return Scaffold(
       body: GradientBackground(
         child: SafeArea(
-          child: Column(
+          child: Stack(
             children: [
+              Column(
+                children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: Row(
@@ -59,6 +71,7 @@ class _CartScreenState extends State<CartScreen> {
                   ],
                 ),
               ),
+              // ── Cart items ─────────────────────────────────────────
               Expanded(
                 child: Obx(
                   () {
@@ -116,12 +129,98 @@ class _CartScreenState extends State<CartScreen> {
                         ),
                       );
                     }
+                    final user = usersController.selectedUser.value;
+                    final headerCount = user == null ? 0 : 1;
                     return ListView.separated(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: cartController.items.length,
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 200),
+                      itemCount: cartController.items.length + headerCount,
                       separatorBuilder: (_, __) => const SizedBox(height: 16),
                       itemBuilder: (context, index) {
-                        final item = cartController.items[index];
+                        if (headerCount == 1 && index == 0) {
+                          return GlassContainer(
+                            radius: 16,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 42,
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.15),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.person,
+                                      color: Colors.white, size: 22),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        user!.name,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                      if (user.mobile.isNotEmpty) ...[
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.phone,
+                                                color: Colors.white54,
+                                                size: 13),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              user.mobile,
+                                              style: const TextStyle(
+                                                  color: Colors.white70,
+                                                  fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                      if (user.email.isNotEmpty) ...[
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.email_outlined,
+                                                color: Colors.white54,
+                                                size: 13),
+                                            const SizedBox(width: 4),
+                                            Flexible(
+                                              child: Text(
+                                                user.email,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                    color: Colors.white70,
+                                                    fontSize: 13),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () =>
+                                      Get.toNamed(AppRoutes.existingUsers),
+                                  child: const Text(
+                                    'Change',
+                                    style: TextStyle(
+                                        color: Colors.white70, fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        final item = cartController.items[index - headerCount];
                         return Dismissible(
                           key: ValueKey(item.item.id),
                           direction: DismissDirection.endToStart,
@@ -152,46 +251,71 @@ class _CartScreenState extends State<CartScreen> {
                   },
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              
+                ],
+              ),
+              Positioned(
+                left: 20,
+                right: 20,
+                bottom: 16,
                 child: Obx(
-                  () => GlassContainer(
-                    radius: 20,
-                    child: SafeArea(
-                      top: false,
+                  () => SafeArea(
+                    top: false,
+                    child: GlassContainer(
+                      radius: 20,
+                      padding: const EdgeInsets.all(12),
                       child: Column(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Total',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              Text(
-                                formatCurrency(
-                                  cartController.total,
-                                  currency: cartController.items.isNotEmpty
-                                      ? cartController.items.first.item.currency
-                                      : '',
-                                  fractionDigits: 2,
-                                ),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                          _TotalRow(
+                            label: 'Grand Total',
+                            value: cartController.grandTotal.value,
+                            isEmphasis: true,
                           ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              onPressed: () =>
+                                  setState(() => _showDetails = !_showDetails),
+                              icon: Icon(
+                                _showDetails
+                                    ? Icons.keyboard_arrow_up
+                                    : Icons.keyboard_arrow_down,
+                                color: Colors.white70,
+                              ),
+                              label: Text(
+                                _showDetails ? 'Hide details' : 'Show details',
+                                style: const TextStyle(color: Colors.white70),
+                              ),
+                            ),
+                          ),
+                          if (_showDetails) ...[
+                            _TotalRow(
+                              label: 'Subtotal',
+                              value: cartController.subtotal.value,
+                            ),
+                            _TotalRow(
+                              label: 'Product Discount',
+                              value: cartController.productDiscountTotal.value,
+                            ),
+                            _TotalRow(
+                              label: 'Coupon Discount',
+                              value: cartController.couponDiscount.value,
+                            ),
+                            _TotalRow(
+                              label: 'Tax',
+                              value: cartController.taxAmount.value,
+                            ),
+                            _TotalRow(
+                              label: 'Shipping',
+                              value: cartController.shippingAmount.value,
+                            ),
+                          ],
                           const SizedBox(height: 12),
                           GlassButton(
                             label: 'Checkout',
                             onTap: () async {
                               if (cartController.items.isEmpty) return;
+                              if (!usersController.hasSelectedUser) return;
                               final order = await ordersController.createOrder(
                                 cartController.items,
                                 cartController.total,
@@ -206,7 +330,13 @@ class _CartScreenState extends State<CartScreen> {
                     ),
                   ),
                 ),
-              )
+              ),
+              Obx(
+                () => (cartController.isLoading.value ||
+                        cartController.isUpdating.value)
+                    ? const _CartFullScreenLoader()
+                    : const SizedBox.shrink(),
+              ),
             ],
           ),
         ),
@@ -392,6 +522,65 @@ class _QuantityControl extends StatelessWidget {
             icon: const Icon(Icons.add, color: Colors.white70, size: 18),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TotalRow extends StatelessWidget {
+  final String label;
+  final double value;
+  final bool isEmphasis;
+
+  const _TotalRow({
+    required this.label,
+    required this.value,
+    this.isEmphasis = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cartController = Get.find<CartController>();
+        final currency = cartController.items.isNotEmpty
+        ? cartController.items.first.item.currency
+        : '';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: isEmphasis ? 16 : 14,
+              fontWeight: isEmphasis ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+          Text(
+            formatCurrency(value, currency: currency, fractionDigits: 2),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: isEmphasis ? 18 : 14,
+              fontWeight: isEmphasis ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CartFullScreenLoader extends StatelessWidget {
+  const _CartFullScreenLoader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black45,
+        alignment: Alignment.center,
+        child: const CircularProgressIndicator(color: Colors.white),
       ),
     );
   }

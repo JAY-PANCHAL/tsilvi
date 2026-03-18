@@ -50,17 +50,31 @@ class OrderSuccessScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      'Order ID: $orderId',
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                    const SizedBox(height: 20),
-                    GlassIconButton(
-                      icon: Icons.share_outlined,
-                      label: 'Share Order ID',
-                      onTap: () => Share.share('Order ID: $orderId'),
-                    ),
-                    const SizedBox(height: 12),
+                    if (orderId.isNotEmpty) ...[
+                      Text(
+                        'Order ID: $orderId',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 20),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final max = constraints.maxWidth > 520
+                              ? 520.0
+                              : constraints.maxWidth;
+                          return Align(
+                            alignment: Alignment.centerLeft,
+                            child: GlassIconButton(
+                              icon: Icons.share_outlined,
+                              label: 'Share Order ID',
+                              onTap: () => Share.share('Order ID: $orderId'),
+                              fullWidth: true,
+                              maxWidth: max,
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     GlassButton(
                       label: 'Back to Dashboard',
                       onTap: () => Get.offAllNamed(AppRoutes.dashboard),

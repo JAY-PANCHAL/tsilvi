@@ -12,6 +12,7 @@ class InventoryModel extends InventoryEntity {
     super.currency,
     super.color,
     super.size,
+    super.isInCart,
     required super.images,
   });
 
@@ -35,6 +36,7 @@ class InventoryModel extends InventoryEntity {
       currency: (json['currency'] ?? json['currencyCode'] ?? '').toString(),
       color: json['color']?.toString(),
       size: json['size']?.toString(),
+      isInCart: json['isInCart'] == true,
       images: _extractImages(json),
     );
   }
@@ -51,6 +53,7 @@ class InventoryModel extends InventoryEntity {
       'currency': currency,
       'color': color,
       'size': size,
+      'isInCart': isInCart,
       'images': images,
     };
   }

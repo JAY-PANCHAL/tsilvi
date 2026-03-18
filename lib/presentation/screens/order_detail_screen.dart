@@ -51,18 +51,21 @@ class OrderDetailScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 child: GlassContainer(
                   radius: 22,
+
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        order.id,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
+                      if (order.id.trim().isNotEmpty) ...[
+                        Text(
+                          order.id,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
+                        const SizedBox(height: 6),
+                      ],
                       Text(
                         date,
                         style: TextStyle(color: AppColors.textSecondary),
@@ -76,11 +79,23 @@ class OrderDetailScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      GlassIconButton(
-                        icon: Icons.share_outlined,
-                        label: 'Share Order',
-                        onTap: () => Share.share(_shareText(order, date)),
-                      ),
+                      if (order.id.trim().isNotEmpty)
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final max =
+                                constraints.maxWidth > 520 ? 520.0 : constraints.maxWidth;
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: GlassIconButton(
+                                icon: Icons.share_outlined,
+                                label: 'Share Order',
+                                onTap: () => Share.share(_shareText(order, date)),
+                                fullWidth: true,
+                                maxWidth: max,
+                              ),
+                            );
+                          },
+                        ),
                     ],
                   ),
                 ),
@@ -108,12 +123,7 @@ class OrderDetailScreen extends StatelessWidget {
                                 children: [
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(14),
-                                    child: Image.network(
-                                      item.item.images.first,
-                                      width: 56,
-                                      height: 56,
-                                      fit: BoxFit.cover,
-                                    ),
+                                    child: _OrderItemImage(urls: item.item.images),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -169,5 +179,35 @@ class OrderDetailScreen extends StatelessWidget {
     final currency =
         order.items.isNotEmpty ? order.items.first.item.currency : '';
     return 'Order ID: ${order.id}\nDate: $date\nItems: $itemsText\nTotal: ${formatCurrency(order.total, currency: currency, fractionDigits: 2)}';
+  }
+}
+
+class _OrderItemImage extends StatelessWidget {
+  final List<String> urls;
+
+  const _OrderItemImage({required this.urls});
+
+  @override
+  Widget build(BuildContext context) {
+    if (urls.isEmpty) {
+      return _fallback();
+    }
+    return Image.network(
+      urls.first,
+      width: 56,
+      height: 56,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => _fallback(),
+    );
+  }
+
+  Widget _fallback() {
+    return Container(
+      width: 56,
+      height: 56,
+      color: Colors.white.withOpacity(0.12),
+      child: const Icon(Icons.image_not_supported_outlined,
+          color: Colors.white70, size: 22),
+    );
   }
 }

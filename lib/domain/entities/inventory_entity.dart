@@ -9,6 +9,7 @@ class InventoryEntity {
   final String currency;
   final String? color;
   final String? size;
+  final bool isInCart;
   final List<String> images;
 
   InventoryEntity({
@@ -22,6 +23,7 @@ class InventoryEntity {
     this.currency = '',
     this.color,
     this.size,
+    this.isInCart = false,
     required this.images,
   });
 }

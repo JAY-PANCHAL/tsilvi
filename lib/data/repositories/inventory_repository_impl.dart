@@ -43,8 +43,17 @@ class InventoryRepositoryImpl implements InventoryRepository {
   }
 
   List<Map<String, dynamic>> _extractList(dynamic data) {
+    List<Map<String, dynamic>> toMapList(dynamic value) {
+      if (value is List) {
+        return value
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+      return [];
+    }
     if (data is List) {
-      return data.whereType<Map<String, dynamic>>().toList();
+      return toMapList(data);
     }
     if (data is Map<String, dynamic>) {
       final dataNode = data['data'];
@@ -53,7 +62,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
             dataNode['products'] ??
             dataNode['productCardVMs'];
         if (nested is List) {
-          return nested.whereType<Map<String, dynamic>>().toList();
+          return toMapList(nested);
         }
       }
       final resultNode = data['result'];
@@ -62,12 +71,12 @@ class InventoryRepositoryImpl implements InventoryRepository {
             resultNode['items'] ??
             resultNode['products'];
         if (list is List) {
-          return list.whereType<Map<String, dynamic>>().toList();
+          return toMapList(list);
         }
       }
       final list = data['data'] ?? data['items'] ?? data['products'];
       if (list is List) {
-        return list.whereType<Map<String, dynamic>>().toList();
+        return toMapList(list);
       }
     }
     return [];

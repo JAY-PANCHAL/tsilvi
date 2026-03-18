@@ -46,7 +46,7 @@ class OtpScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'We sent a code to your number. Use 1234 for demo.',
+                        'Enter the OTP sent to your mobile number.',
                         style: TextStyle(color: AppColors.textSecondary),
                       ),
                       const SizedBox(height: 24),

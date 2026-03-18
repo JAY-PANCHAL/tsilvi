@@ -129,8 +129,8 @@ class MockApiService {
         id: 'user_$i',
         name: names[i],
         mobile: '98${_random.nextInt(100000000).toString().padLeft(8, '0')}',
-        email: '${names[i].split(' ').first.toLowerCase()}@tsilvi.com',
-        businessName: 'Tsilvi Retail ${i + 1}',
+        email: '${names[i].split(' ').first.toLowerCase()}@tsilivi.com',
+        businessName: 'Tsilivi Retail ${i + 1}',
       ));
     }
   }
