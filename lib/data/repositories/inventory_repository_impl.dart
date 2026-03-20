@@ -37,7 +37,13 @@ class InventoryRepositoryImpl implements InventoryRepository {
     final encoded = Uri.encodeComponent(sku);
     final data = await api.get('/inventory/$encoded');
     if (data is Map<String, dynamic>) {
-      return InventoryModel.fromJson(data);
+      final list = _extractList(data);
+      if (list.isNotEmpty) {
+        return InventoryModel.fromJson(list.first);
+      }
+      if (_looksLikeItem(data)) {
+        return InventoryModel.fromJson(data);
+      }
     }
     return null;
   }
@@ -80,5 +86,16 @@ class InventoryRepositoryImpl implements InventoryRepository {
       }
     }
     return [];
+  }
+
+  bool _looksLikeItem(Map<String, dynamic> data) {
+    return data.containsKey('id') ||
+        data.containsKey('_id') ||
+        data.containsKey('itemId') ||
+        data.containsKey('name') ||
+        data.containsKey('productName') ||
+        data.containsKey('sku') ||
+        data.containsKey('imageUrl') ||
+        data.containsKey('images');
   }
 }

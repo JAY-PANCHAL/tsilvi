@@ -20,11 +20,26 @@ import '../../presentation/controllers/inventory_controller.dart';
 import '../../presentation/controllers/orders_controller.dart';
 import '../../presentation/controllers/users_controller.dart';
 import '../utils/glass_snackbar.dart';
+import '../../routes/app_routes.dart';
 
 void registerDependencies() {
   final apiService = ApiService();
   ApiService.onMessage = (success, message) {
     showGlassSnackbar(message: message, success: success);
+  };
+  ApiService.onUnauthorized = () async {
+    if (Get.currentRoute == AppRoutes.login) return;
+    if (Get.isRegistered<CartController>()) {
+      Get.find<CartController>().clear();
+    }
+    if (Get.isRegistered<UsersController>()) {
+      Get.find<UsersController>().selectedUser.value = null;
+    }
+    if (Get.isRegistered<AuthController>()) {
+      Get.find<AuthController>().mobile.value = '';
+      Get.find<AuthController>().otp.value = '';
+    }
+    Get.offAllNamed(AppRoutes.login);
   };
   Get.lazyPut(() => apiService, fenix: true);
 

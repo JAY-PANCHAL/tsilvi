@@ -8,6 +8,8 @@ import '../../core/utils/app_storage.dart';
 class ApiService {
   final String baseUrl;
   static void Function(bool success, String message)? onMessage;
+  static Future<void> Function()? onUnauthorized;
+  static bool _handlingUnauthorized = false;
   final http.Client _client = http.Client();
 
   ApiService({this.baseUrl = 'https://tsilivijewels.com'});
@@ -32,6 +34,7 @@ class ApiService {
       headers: await _headers(auth: auth),
     );
     final decoded = _attachStatus(_decode(response), response.statusCode);
+    _handleUnauthorized(response.statusCode);
     _notify(response.statusCode, decoded);
     return decoded;
   }
@@ -48,6 +51,7 @@ class ApiService {
       body: body == null ? null : jsonEncode(body),
     );
     final decoded = _attachStatus(_decode(response), response.statusCode);
+    _handleUnauthorized(response.statusCode);
     _notify(response.statusCode, decoded);
     return decoded;
   }
@@ -60,6 +64,7 @@ class ApiService {
       headers: await _headers(auth: auth),
     );
     final decoded = _attachStatus(_decode(response), response.statusCode);
+    _handleUnauthorized(response.statusCode);
     _notify(response.statusCode, decoded);
     return decoded;
   }
@@ -109,6 +114,24 @@ class ApiService {
     if (msg == null || msg.isEmpty) return;
     final success = _extractSuccess(decoded, status);
     if (onMessage != null) onMessage!(success, msg);
+  }
+
+  void _handleUnauthorized(int status) {
+    if (status != 401 || _handlingUnauthorized) return;
+    _handlingUnauthorized = true;
+    Future.microtask(() async {
+      try {
+        await AppStorage.setToken(null);
+        await AppStorage.setLoggedIn(false);
+        if (onUnauthorized != null) {
+          await onUnauthorized!();
+        }
+      } finally {
+        Future.delayed(const Duration(seconds: 1), () {
+          _handlingUnauthorized = false;
+        });
+      }
+    });
   }
 
   bool _extractSuccess(dynamic data, int status) {
