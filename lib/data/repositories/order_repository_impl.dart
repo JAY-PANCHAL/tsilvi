@@ -25,11 +25,52 @@ class OrderRepositoryImpl implements OrderRepository {
       total: order.total,
       items: order.items,
     );
-    final data = await api.post('/order/create', body: model.toJson());
+    final body = {
+      ...model.toJson(),
+      'customerId': 117,
+    };
+    final data = await api.post('/order/create', body: body);
+    if (!_isSuccess(data)) {
+      final msg = _extractMessage(data) ?? 'Unable to place order';
+      throw Exception(msg);
+    }
     if (data is Map<String, dynamic>) {
       return OrderModel.fromJson(data);
     }
     return model;
+  }
+
+  bool _isSuccess(dynamic data) {
+    if (data is Map<String, dynamic>) {
+      final status = data['_statusCode'];
+      if (status is int && (status < 200 || status >= 300)) return false;
+      final s = data['success'] ?? data['status'];
+      final nested = data['data'];
+      final s2 = nested is Map<String, dynamic>
+          ? (nested['success'] ?? nested['status'])
+          : null;
+      final value = s ?? s2;
+      if (value is bool) return value;
+      if (value is num) return value == 1 || value == 200;
+      if (value is String) {
+        final v = value.toLowerCase();
+        return v == 'true' || v == 'success' || v == 'ok';
+      }
+      return true;
+    }
+    return true;
+  }
+
+  String? _extractMessage(dynamic data) {
+    if (data is Map<String, dynamic>) {
+      return data['message']?.toString() ??
+          data['msg']?.toString() ??
+          (data['data'] is Map<String, dynamic>
+              ? (data['data']['message']?.toString() ??
+                  data['data']['msg']?.toString())
+              : null);
+    }
+    return null;
   }
 
   List<Map<String, dynamic>> _extractList(dynamic data) {

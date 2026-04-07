@@ -21,6 +21,7 @@ class InventoryDetailSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final cartController = Get.find<CartController>();
     final usersController = Get.find<UsersController>();
+    final images = item.images.where((e) => e.trim().isNotEmpty).toList();
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -39,32 +40,33 @@ class InventoryDetailSheet extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              CarouselSlider(
-                options: CarouselOptions(
-                  height: 220,
-                  enlargeCenterPage: true,
-                  autoPlay: true,
+              if (images.isEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Container(
+                    height: 220,
+                    width: double.infinity,
+                    color: Colors.white12,
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.image_not_supported,
+                        color: Colors.white54, size: 48),
+                  ),
+                )
+              else
+                CarouselSlider.builder(
+                  options: CarouselOptions(
+                    height: 220,
+                    enlargeCenterPage: images.length > 1,
+                    autoPlay: images.length > 1,
+                    enableInfiniteScroll: images.length > 1,
+                    viewportFraction: 0.9,
+                  ),
+                  itemCount: images.length,
+                  itemBuilder: (_, index, __) => _ZoomableImage(
+                    image: images[index],
+                    item: item,
+                  ),
                 ),
-                items: item.images.isEmpty
-                    ? [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          child: Container(
-                            width: double.infinity,
-                            color: Colors.white12,
-                            alignment: Alignment.center,
-                            child: const Icon(Icons.image_not_supported,
-                                color: Colors.white54, size: 48),
-                          ),
-                        ),
-                      ]
-                    : item.images.map((image) {
-                        return _ZoomableImage(
-                          image: image,
-                          item: item,
-                        );
-                      }).toList(),
-              ),
               const SizedBox(height: 16),
               Text(
                 item.name,

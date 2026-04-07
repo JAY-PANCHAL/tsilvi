@@ -7,7 +7,6 @@ import '../../core/utils/responsive.dart';
 import '../../routes/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/inventory_controller.dart';
-import '../widgets/cart_icon_button.dart';
 import '../widgets/fade_slide.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/gradient_background.dart';
@@ -20,7 +19,7 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final inventoryController = Get.find<InventoryController>();
     final authController = Get.find<AuthController>();
-    final columns = Responsive.gridCount(context, mobile: 1, tablet: 2);
+    final columns = Responsive.gridCount(context, mobile: 2, tablet: 3);
     return Scaffold(
       body: GradientBackground(
         child: SafeArea(
@@ -39,7 +38,7 @@ class DashboardScreen extends StatelessWidget {
                     const SizedBox(width: 10),
                     const Expanded(
                       child: Text(
-                        'Dashboard',
+                        'Tsilivi Sales',
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w600,
@@ -51,7 +50,6 @@ class DashboardScreen extends StatelessWidget {
                       onPressed: authController.logout,
                       icon: const Icon(Icons.logout, color: Colors.white),
                     ),
-                    const CartIconButton(),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -65,7 +63,7 @@ class DashboardScreen extends StatelessWidget {
                     crossAxisCount: columns,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
-                    childAspectRatio: columns == 1 ? 2.4 : 2.2,
+                    childAspectRatio: columns == 1 ? 1.4 : 1.0,
                     children: [
                       FadeSlide(
                         index: 0,
@@ -145,37 +143,26 @@ class _ActionCard extends StatelessWidget {
       onTap: onTap,
       child: GlassContainer(
         radius: 22,
-        child: Row(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircleAvatar(
-              radius: 24,
+              radius: 26,
               backgroundColor: Colors.white.withOpacity(0.12),
               child: Icon(icon, color: Colors.white),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
-                ],
+            const SizedBox(height: 12),
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
               ),
             ),
-            const Icon(Icons.arrow_forward_ios,
-                size: 16, color: Colors.white70),
           ],
         ),
       ),
@@ -198,34 +185,33 @@ class _InfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GlassContainer(
       radius: 22,
-      child: Row(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircleAvatar(
-            radius: 24,
+            radius: 26,
             backgroundColor: Colors.white.withOpacity(0.12),
             child: Icon(icon, color: Colors.white),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  value,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-              ],
+          const SizedBox(height: 12),
+          Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
             ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white70),
           ),
         ],
       ),

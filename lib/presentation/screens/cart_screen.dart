@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../core/utils/app_colors.dart';
 import '../../core/utils/price_format.dart';
+import '../../core/utils/toast.dart';
 import '../../domain/entities/cart_item_entity.dart';
 import '../../routes/app_routes.dart';
 import '../controllers/cart_controller.dart';
@@ -316,13 +317,25 @@ class _CartScreenState extends State<CartScreen> {
                             onTap: () async {
                               if (cartController.items.isEmpty) return;
                               if (!usersController.hasSelectedUser) return;
-                              final order = await ordersController.createOrder(
-                                cartController.items,
-                                cartController.total,
-                              );
-                              cartController.clear();
-                              Get.toNamed(AppRoutes.success,
-                                  arguments: order.id);
+                              try {
+                                final order =
+                                    await ordersController.createOrder(
+                                  cartController.items,
+                                  cartController.total,
+                                );
+                                cartController.clear();
+                                Get.toNamed(AppRoutes.success,
+                                    arguments: order.id);
+                              } catch (e) {
+                                final msg = e.toString().replaceFirst(
+                                    'Exception: ', '');
+                                showToast(
+                                  msg.isNotEmpty
+                                      ? msg
+                                      : 'Checkout failed',
+                                  success: false,
+                                );
+                              }
                             },
                           ),
                         ],

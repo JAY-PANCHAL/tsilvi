@@ -86,25 +86,6 @@ class InventoryScreen extends StatelessWidget {
                         onSubmitted: controller.searchBySku,
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Obx(
-                      () {
-                        final user = usersController.selectedUser.value;
-                        return GestureDetector(
-                          onTap: () => Get.toNamed(AppRoutes.existingUsers),
-                          child: Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.12),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.person,
-                                color: Colors.white70, size: 20),
-                          ),
-                        );
-                      },
-                    ),
                   ],
                 ),
               ),

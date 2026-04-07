@@ -72,11 +72,38 @@ class InventoryModel extends InventoryEntity {
   }
 
   static List<String> _extractImages(Map<String, dynamic> json) {
-    final list = (json['images'] as List?)
-            ?.map((e) => e.toString())
-            .where((e) => e.isNotEmpty)
-            .toList() ??
-        [];
+    final imagesRaw = json['images'];
+    final list = <String>[];
+    if (imagesRaw is List) {
+      for (final entry in imagesRaw) {
+        if (entry == null) continue;
+        if (entry is String) {
+          final trimmed = entry.trim();
+          if (trimmed.isNotEmpty) list.add(trimmed);
+          continue;
+        }
+        if (entry is Map) {
+          final mapped = entry['url'] ??
+              entry['imageUrl'] ??
+              entry['image'] ??
+              entry['src'] ??
+              entry['path'];
+          if (mapped != null) {
+            final trimmed = mapped.toString().trim();
+            if (trimmed.isNotEmpty) list.add(trimmed);
+          }
+          continue;
+        }
+        final fallback = entry.toString().trim();
+        if (fallback.isNotEmpty) list.add(fallback);
+      }
+    } else if (imagesRaw is String) {
+      final split = imagesRaw
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty);
+      list.addAll(split);
+    }
     if (list.isNotEmpty) return list;
     final imageUrl = json['imageUrl']?.toString() ??
         json['image']?.toString() ??
