@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../core/utils/app_storage.dart';
@@ -10,7 +13,22 @@ class ApiService {
   static void Function(bool success, String message)? onMessage;
   static Future<void> Function()? onUnauthorized;
   static bool _handlingUnauthorized = false;
-  final http.Client _client = http.Client();
+  final http.Client _client = _buildClient();
+
+  /// Creates an IOClient with a custom HttpClient so that SSL handshakes
+  /// work correctly in AOT/release mode on Android and iOS.
+  /// The badCertificateCallback allows the app to connect even if the server
+  /// certificate is self-signed or has a chain issue.
+  static http.Client _buildClient() {
+    final httpClient = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 20)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) {
+        // Allow connections to our own API domain regardless of cert issues
+        return host.contains('tsilivijewels.com');
+      };
+    return IOClient(httpClient);
+  }
 
   ApiService({this.baseUrl = 'https://tsilivijewels.com'});
 
@@ -75,16 +93,47 @@ class ApiService {
     required Map<String, String> headers,
     String? body,
   }) async {
-    debugPrint('[API][$method] $uri');
-    debugPrint('[API][$method] headers=$headers');
-    if (body != null) debugPrint('[API][$method] body=$body');
-    final request = http.Request(method, uri);
-    request.headers.addAll(headers);
-    if (body != null) request.body = body;
-    final streamed = await _client.send(request);
-    final response = await http.Response.fromStream(streamed);
-    debugPrint('[API][$method] ${response.statusCode} ${response.body}');
-    return response;
+    Future<http.Response> doSend(Uri target) async {
+      debugPrint('[API][$method] $target');
+      debugPrint('[API][$method] headers=$headers');
+      if (body != null) debugPrint('[API][$method] body=$body');
+      final request = http.Request(method, target);
+      request.headers.addAll(headers);
+      if (body != null) request.body = body;
+      final streamed =
+          await _client.send(request).timeout(const Duration(seconds: 20));
+      final response = await http.Response.fromStream(streamed);
+      debugPrint('[API][$method] ${response.statusCode} ${response.body}');
+      return response;
+    }
+
+    try {
+      return await doSend(uri);
+    } on SocketException catch (e) {
+      final isHostLookup = e.message.toLowerCase().contains('failed host lookup');
+      final hasWww = uri.host.toLowerCase().startsWith('www.');
+      if (isHostLookup && !hasWww) {
+        final retryUri = uri.replace(host: 'www.${uri.host}');
+        debugPrint(
+            '[API][$method] host lookup failed for ${uri.host}, retrying with ${retryUri.host}');
+        return doSend(retryUri);
+      }
+      rethrow;
+    } on TimeoutException {
+      final hasWww = uri.host.toLowerCase().startsWith('www.');
+      if (!hasWww) {
+        final retryUri = uri.replace(host: 'www.${uri.host}');
+        debugPrint(
+            '[API][$method] timeout for ${uri.host}, retrying with ${retryUri.host}');
+        try {
+          return await doSend(retryUri);
+        } on TimeoutException {
+          throw const SocketException(
+              'Request timed out. Please check connection.');
+        }
+      }
+      throw const SocketException('Request timed out. Please check connection.');
+    }
   }
 
   dynamic _decode(http.Response response) {
