@@ -18,6 +18,9 @@ class CartController extends GetxController {
   final couponDiscount = 0.0.obs;
   final taxAmount = 0.0.obs;
   final shippingAmount = 0.0.obs;
+  final silverPrice = 0.0.obs;
+  final totalLaborCost = 0.0.obs;
+  final totalNetWeight = 0.0.obs;
   final grandTotal = 0.0.obs;
 
   @override
@@ -39,6 +42,9 @@ class CartController extends GetxController {
       couponDiscount.value = data.couponDiscount;
       taxAmount.value = data.taxAmount;
       shippingAmount.value = data.shippingAmount;
+      silverPrice.value = data.silverPrice;
+      totalLaborCost.value = data.totalLaborCost;
+      totalNetWeight.value = data.totalNetWeight;
       grandTotal.value = data.grandTotal;
     } finally {
       isLoading.value = false;
@@ -53,12 +59,14 @@ class CartController extends GetxController {
       return;
     }
     final index = _indexFor(item);
+    var newQty = 1;
     if (index >= 0) {
       final current = items[index];
+      newQty = current.quantity + 1;
       items[index] = CartItemEntity(
         cartItemId: current.cartItemId,
         item: current.item,
-        quantity: current.quantity + 1,
+        quantity: newQty,
       );
     } else {
       items.add(CartItemEntity(item: item, quantity: 1));
@@ -66,7 +74,7 @@ class CartController extends GetxController {
     items.refresh();
     isUpdating.value = true;
     try {
-      final added = await repository.addToCart(item, 1);
+      final added = await repository.addToCart(item, newQty);
       if (added != null) {
         final updateIndex = _indexFor(added.item);
         if (updateIndex >= 0) {
@@ -78,9 +86,9 @@ class CartController extends GetxController {
           );
           items.refresh();
         }
-      } else {
-        await _refreshSilent();
       }
+      // Always re-fetch cart so totals/summary are accurate.
+      await _refreshSilent();
     } finally {
       isUpdating.value = false;
     }
@@ -92,13 +100,37 @@ class CartController extends GetxController {
       final existing = items[index];
       items.removeAt(index);
       items.refresh();
-      if (existing.cartItemId != null) {
-        isUpdating.value = true;
-        try {
-          await repository.removeFromCart(existing.cartItemId!);
-        } finally {
-          isUpdating.value = false;
+      final cartItemId = existing.cartItemId?.trim();
+      final productId = existing.item.itemId?.toString();
+      if ((cartItemId == null || cartItemId.isEmpty) &&
+          (productId == null || productId.isEmpty)) {
+        showToast('Unable to remove item', success: false);
+        await _refreshSilent();
+        return;
+      }
+      isUpdating.value = true;
+      try {
+        if (cartItemId != null && cartItemId.isNotEmpty) {
+          await repository.removeFromCart(id: cartItemId);
+        } else if (productId != null && productId.isNotEmpty) {
+          await repository.removeFromCart(id: productId);
         }
+        await _refreshSilent();
+
+        // Some server variants ignore cartItemId and require product/item id.
+        // If item still exists after refresh, retry once with product id.
+        if (_indexFor(existing.item) >= 0 &&
+            productId != null &&
+            productId.isNotEmpty &&
+            productId != cartItemId) {
+          await repository.removeFromCart(id: productId);
+          await _refreshSilent();
+        }
+      } catch (e) {
+        showToast('Failed to remove item', success: false);
+        await _refreshSilent();
+      } finally {
+        isUpdating.value = false;
       }
     }
   }
@@ -119,7 +151,11 @@ class CartController extends GetxController {
         items.refresh();
         isUpdating.value = true;
         try {
-          await repository.addToCart(item, -1);
+          await repository.addToCart(item, newQty);
+          await _refreshSilent();
+        } catch (e) {
+          showToast('Failed to update quantity', success: false);
+          await _refreshSilent();
         } finally {
           isUpdating.value = false;
         }
@@ -127,9 +163,9 @@ class CartController extends GetxController {
     }
   }
 
-  void setQuantity(InventoryEntity item, int quantity) {
+  Future<void> setQuantity(InventoryEntity item, int quantity) async {
     if (quantity <= 0) {
-      removeItem(item);
+      await removeItem(item);
       return;
     }
     final index = _indexFor(item);
@@ -139,6 +175,16 @@ class CartController extends GetxController {
       items.add(CartItemEntity(item: item, quantity: quantity));
     }
     items.refresh();
+    isUpdating.value = true;
+    try {
+      await repository.addToCart(item, quantity);
+      await _refreshSilent();
+    } catch (e) {
+      showToast('Failed to update quantity', success: false);
+      await _refreshSilent();
+    } finally {
+      isUpdating.value = false;
+    }
   }
 
   double get total {
@@ -157,6 +203,9 @@ class CartController extends GetxController {
     couponDiscount.value = 0;
     taxAmount.value = 0;
     shippingAmount.value = 0;
+    silverPrice.value = 0;
+    totalLaborCost.value = 0;
+    totalNetWeight.value = 0;
     grandTotal.value = 0;
   }
 
@@ -190,6 +239,9 @@ class CartController extends GetxController {
     couponDiscount.value = data.couponDiscount;
     taxAmount.value = data.taxAmount;
     shippingAmount.value = data.shippingAmount;
+    silverPrice.value = data.silverPrice;
+    totalLaborCost.value = data.totalLaborCost;
+    totalNetWeight.value = data.totalNetWeight;
     grandTotal.value = data.grandTotal;
   }
 }

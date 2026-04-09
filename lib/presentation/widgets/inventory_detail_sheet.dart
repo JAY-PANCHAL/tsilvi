@@ -77,17 +77,67 @@ class InventoryDetailSheet extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                item.sku,
-                style: TextStyle(color: AppColors.textSecondary),
-              ),
+              if (item.sku.trim().isNotEmpty)
+                Text(
+                  item.sku.trim(),
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
               const SizedBox(height: 12),
-              Text(
-                item.description,
-                style: TextStyle(color: AppColors.textSecondary),
-                textAlign: TextAlign.center,
-              ),
+              if (item.description.trim().isNotEmpty)
+                Text(
+                  item.description.trim(),
+                  style: TextStyle(color: AppColors.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
               const SizedBox(height: 12),
+              if (item.netWeight != null ||
+                  item.laborCostPerGm != null ||
+                  item.silverPrice != null ||
+                  (item.color != null && item.color!.trim().isNotEmpty) ||
+                  (item.size != null && item.size!.trim().isNotEmpty))
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withOpacity(0.10)),
+                  ),
+                  child: Column(
+                    children: [
+                      if (item.netWeight != null)
+                        _DetailLine(
+                          label: 'Net Weight',
+                          value: '${item.netWeight!.toStringAsFixed(3)} g',
+                        ),
+                      if (item.laborCostPerGm != null)
+                        _DetailLine(
+                          label: 'Labour rate',
+                          value:
+                              '${formatCurrency(item.laborCostPerGm!, currency: 'INR', fractionDigits: 0)}/gm',
+                        ),
+                      if (item.silverPrice != null)
+                        _DetailLine(
+                          label: 'Silver Rate / gm',
+                          value: formatCurrency(
+                            item.silverPrice!,
+                            currency: 'INR',
+                            fractionDigits: 0,
+                          ),
+                        ),
+                      if (item.color != null && item.color!.trim().isNotEmpty)
+                        _DetailLine(label: 'Color', value: item.color!.trim()),
+                      if (item.size != null && item.size!.trim().isNotEmpty)
+                        _DetailLine(label: 'Size', value: item.size!.trim()),
+                    ],
+                  ),
+                ),
+              if (item.netWeight != null ||
+                  item.laborCostPerGm != null ||
+                  item.silverPrice != null ||
+                  (item.color != null && item.color!.trim().isNotEmpty) ||
+                  (item.size != null && item.size!.trim().isNotEmpty))
+                const SizedBox(height: 12),
               Text(
                 formatCurrency(
                   item.price,
@@ -115,6 +165,44 @@ class InventoryDetailSheet extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DetailLine extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _DetailLine({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

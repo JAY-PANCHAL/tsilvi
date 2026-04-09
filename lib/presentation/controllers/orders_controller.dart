@@ -25,9 +25,19 @@ class OrdersController extends GetxController {
     isLoading.value = false;
   }
 
-  Future<OrderEntity> createOrder(List<CartItemEntity> items, double total) async {
+  Future<OrderEntity> createOrder(
+    List<CartItemEntity> items,
+    double total, {
+    required dynamic customerId,
+  }) async {
     final order = OrderEntity(
       id: 'ORD-${DateTime.now().millisecondsSinceEpoch % 100000}',
+      customerId: customerId,
+      sku: null,
+      silverPrice: null,
+      laborCostPerGm: null,
+      totalLaborCost: null,
+      totalNetWeight: null,
       date: DateTime.now(),
       total: total,
       items: items,

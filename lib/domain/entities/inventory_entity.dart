@@ -9,6 +9,9 @@ class InventoryEntity {
   final String currency;
   final String? color;
   final String? size;
+  final double? netWeight;
+  final double? laborCostPerGm;
+  final double? silverPrice;
   final bool isInCart;
   final List<String> images;
 
@@ -23,6 +26,9 @@ class InventoryEntity {
     this.currency = '',
     this.color,
     this.size,
+    this.netWeight,
+    this.laborCostPerGm,
+    this.silverPrice,
     this.isInCart = false,
     required this.images,
   });

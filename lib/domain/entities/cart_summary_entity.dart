@@ -7,6 +7,9 @@ class CartSummaryEntity {
   final double couponDiscount;
   final double taxAmount;
   final double shippingAmount;
+  final double silverPrice;
+  final double totalLaborCost;
+  final double totalNetWeight;
   final double grandTotal;
   final bool? isAuthenticated;
   final String? appliedCouponCode;
@@ -18,6 +21,9 @@ class CartSummaryEntity {
     required this.couponDiscount,
     required this.taxAmount,
     required this.shippingAmount,
+    required this.silverPrice,
+    required this.totalLaborCost,
+    required this.totalNetWeight,
     required this.grandTotal,
     this.isAuthenticated,
     this.appliedCouponCode,

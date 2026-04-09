@@ -23,6 +23,9 @@ class CartRepositoryImpl implements CartRepository {
       couponDiscount: summary.couponDiscount,
       taxAmount: summary.taxAmount,
       shippingAmount: summary.shippingAmount,
+      silverPrice: summary.silverPrice,
+      totalLaborCost: summary.totalLaborCost,
+      totalNetWeight: summary.totalNetWeight,
       grandTotal: summary.grandTotal,
       isAuthenticated: summary.isAuthenticated,
       appliedCouponCode: summary.appliedCouponCode,
@@ -31,8 +34,8 @@ class CartRepositoryImpl implements CartRepository {
 
   @override
   Future<CartItemEntity?> addToCart(InventoryEntity item, int quantity) async {
-    final resolvedItemId = item.itemId ??
-        (item.id.isNotEmpty ? int.tryParse(item.id) : null);
+    final resolvedItemId =
+        item.itemId ?? (item.id.isNotEmpty ? int.tryParse(item.id) : null);
     if (resolvedItemId == null) return null;
     final body = {
       'itemId': resolvedItemId,
@@ -49,8 +52,13 @@ class CartRepositoryImpl implements CartRepository {
   }
 
   @override
-  Future<void> removeFromCart(String cartItemId) async {
-    await api.delete('/cart/$cartItemId');
+  Future<void> removeFromCart({required String id, String? itemId}) async {
+    // Some backend builds expect the id as a path segment (no `id=`),
+    // others expect it as a query param. Try the path form first.
+    final res = await api.post('/cart/delete/$id');
+    if (res is Map<String, dynamic> && res['_statusCode'] == 404) {
+      await api.post('/cart/delete', query: {'id': id});
+    }
   }
 
   List<Map<String, dynamic>> _extractList(dynamic data) {
@@ -76,9 +84,21 @@ class CartRepositoryImpl implements CartRepository {
   CartSummaryEntity _extractSummary(dynamic data) {
     Map<String, dynamic> node = {};
     if (data is Map<String, dynamic>) {
+      // Most endpoints wrap as { data: {...} } but some return flat payloads.
       final dataNode = data['data'];
-      if (dataNode is Map<String, dynamic>) {
-        node = dataNode;
+      if (dataNode is Map) {
+        node = Map<String, dynamic>.from(dataNode);
+      } else {
+        node = Map<String, dynamic>.from(data);
+      }
+      // Some payloads nest totals under `summary` or `cart`.
+      final summaryNode = node['summary'];
+      if (summaryNode is Map) {
+        node = Map<String, dynamic>.from(summaryNode);
+      }
+      final cartNode = node['cart'];
+      if (cartNode is Map) {
+        node = Map<String, dynamic>.from(cartNode);
       }
     }
     double toDouble(dynamic v) {
@@ -89,12 +109,26 @@ class CartRepositoryImpl implements CartRepository {
 
     return CartSummaryEntity(
       items: const [],
-      subtotal: toDouble(node['subtotal']),
-      productDiscountTotal: toDouble(node['productDiscountTotal']),
-      couponDiscount: toDouble(node['couponDiscount']),
-      taxAmount: toDouble(node['taxAmount']),
-      shippingAmount: toDouble(node['shippingAmount']),
-      grandTotal: toDouble(node['grandTotal']),
+      subtotal: toDouble(node['subtotal'] ?? node['subTotal']),
+      productDiscountTotal:
+          toDouble(node['productDiscountTotal'] ?? node['discountTotal']),
+      couponDiscount: toDouble(node['couponDiscount'] ?? node['couponAmount']),
+      taxAmount: toDouble(node['taxAmount'] ?? node['tax']),
+      shippingAmount: toDouble(node['shippingAmount'] ?? node['shipping']),
+      silverPrice: toDouble(
+        node['silverPrice'] ?? node['totalSilverPrice'] ?? node['silverRate'],
+      ),
+      totalLaborCost: toDouble(
+        node['totalLaborCost'] ??
+            node['totalLabourCharges'] ??
+            node['totalLabourCost'],
+      ),
+      totalNetWeight: toDouble(
+        node['totalNetWeight'] ?? node['netWeight'] ?? node['totalNetWt'],
+      ),
+      grandTotal: toDouble(
+        node['grandTotal'] ?? node['total'] ?? node['totalAmount'],
+      ),
       isAuthenticated: node['isAuthenticated'] as bool?,
       appliedCouponCode: node['appliedCouponCode']?.toString(),
     );

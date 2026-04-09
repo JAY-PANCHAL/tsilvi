@@ -142,6 +142,33 @@ class _OrderCard extends StatelessWidget {
                     '${order.items.length} items · $date',
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
+                  if ((order.sku ?? '').trim().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'SKU: ${order.sku}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ],
+                  if (order.totalNetWeight != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Net Wt: ${order.totalNetWeight!.toStringAsFixed(3)} g',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ],
+                  if (order.laborCostPerGm != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Labour rate: ${formatCurrency(order.laborCostPerGm!, currency: "INR", fractionDigits: 2)}/gm',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ],
                 ],
               ),
             ),

@@ -51,7 +51,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                     ),
                     const Text(
-                      'Add New User',
+                      'Add New Customer',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w600,
@@ -109,7 +109,8 @@ class _AddUserScreenState extends State<AddUserScreen> {
                       ),
                       const SizedBox(height: 20),
                       GlassButton(
-                        label: _isSubmitting ? 'Creating...' : 'Create User',
+                        label:
+                            _isSubmitting ? 'Creating...' : 'Create Customer',
                         onTap: () async {
                           if (_isSubmitting) return;
                           if (nameController.text.trim().isEmpty ||

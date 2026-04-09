@@ -25,11 +25,8 @@ class InventoryRepositoryImpl implements InventoryRepository {
     if (query.isNotEmpty) {
       params['search'] = query;
     }
-    return api
-        .get('/inventory', query: params)
-        .then((data) => _extractList(data)
-            .map((e) => InventoryModel.fromJson(e))
-            .toList());
+    return api.get('/inventory', query: params).then((data) =>
+        _extractList(data).map((e) => InventoryModel.fromJson(e)).toList());
   }
 
   @override
@@ -37,11 +34,15 @@ class InventoryRepositoryImpl implements InventoryRepository {
     final encoded = Uri.encodeComponent(sku);
     final data = await api.get('/inventory/$encoded');
     if (data is Map<String, dynamic>) {
+      final dataNode = data['data'];
+      if (dataNode is Map<String, dynamic> && _isValidItem(dataNode)) {
+        return InventoryModel.fromJson(dataNode);
+      }
       final list = _extractList(data);
       if (list.isNotEmpty) {
         return InventoryModel.fromJson(list.first);
       }
-      if (_looksLikeItem(data)) {
+      if (_isValidItem(data)) {
         return InventoryModel.fromJson(data);
       }
     }
@@ -58,10 +59,20 @@ class InventoryRepositoryImpl implements InventoryRepository {
       }
       return [];
     }
+
     if (data is List) {
       return toMapList(data);
     }
     if (data is Map<String, dynamic>) {
+      final searchResultNode = data['searchResult'];
+      if (searchResultNode is Map<String, dynamic>) {
+        final searchItems = searchResultNode['productCardVMs'] ??
+            searchResultNode['items'] ??
+            searchResultNode['products'];
+        if (searchItems is List) {
+          return toMapList(searchItems);
+        }
+      }
       final dataNode = data['data'];
       if (dataNode is Map<String, dynamic>) {
         final nested = dataNode['items'] ??
@@ -69,6 +80,15 @@ class InventoryRepositoryImpl implements InventoryRepository {
             dataNode['productCardVMs'];
         if (nested is List) {
           return toMapList(nested);
+        }
+        final nestedSearch = dataNode['searchResult'];
+        if (nestedSearch is Map<String, dynamic>) {
+          final searchItems = nestedSearch['productCardVMs'] ??
+              nestedSearch['items'] ??
+              nestedSearch['products'];
+          if (searchItems is List) {
+            return toMapList(searchItems);
+          }
         }
       }
       final resultNode = data['result'];
@@ -88,14 +108,20 @@ class InventoryRepositoryImpl implements InventoryRepository {
     return [];
   }
 
-  bool _looksLikeItem(Map<String, dynamic> data) {
-    return data.containsKey('id') ||
-        data.containsKey('_id') ||
-        data.containsKey('itemId') ||
-        data.containsKey('name') ||
-        data.containsKey('productName') ||
-        data.containsKey('sku') ||
-        data.containsKey('imageUrl') ||
-        data.containsKey('images');
+  bool _isValidItem(Map<String, dynamic> data) {
+    final id = data['id'] ?? data['_id'] ?? data['itemId'];
+    final parsedId = id is num ? id.toInt() : int.tryParse('${id ?? ''}');
+    final name = (data['name'] ?? data['productName'] ?? '').toString().trim();
+    final sku = (data['sku'] ?? data['code'] ?? '').toString().trim();
+    final hasMedia =
+        (data['imageUrl']?.toString().trim().isNotEmpty ?? false) ||
+            (data['imageMulti']?.toString().trim().isNotEmpty ?? false) ||
+            (data['imageUrlMulti']?.toString().trim().isNotEmpty ?? false) ||
+            (data['imagemulti']?.toString().trim().isNotEmpty ?? false) ||
+            ((data['images'] is List) && (data['images'] as List).isNotEmpty);
+    return (parsedId != null && parsedId > 0) ||
+        name.isNotEmpty ||
+        sku.isNotEmpty ||
+        hasMedia;
   }
 }

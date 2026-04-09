@@ -5,5 +5,5 @@ import '../entities/inventory_entity.dart';
 abstract class CartRepository {
   Future<CartSummaryEntity> fetchCart();
   Future<CartItemEntity?> addToCart(InventoryEntity item, int quantity);
-  Future<void> removeFromCart(String cartItemId);
+  Future<void> removeFromCart({required String id, String? itemId});
 }

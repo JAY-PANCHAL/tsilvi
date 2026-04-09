@@ -6,7 +6,6 @@ import '../../core/utils/app_colors.dart';
 import '../../core/utils/responsive.dart';
 import '../../routes/app_routes.dart';
 import '../controllers/auth_controller.dart';
-import '../controllers/inventory_controller.dart';
 import '../widgets/fade_slide.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/gradient_background.dart';
@@ -17,7 +16,6 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final inventoryController = Get.find<InventoryController>();
     final authController = Get.find<AuthController>();
     final columns = Responsive.gridCount(context, mobile: 2, tablet: 3);
     return Scaffold(
@@ -76,35 +74,24 @@ class DashboardScreen extends StatelessWidget {
                       ),
                       FadeSlide(
                         index: 1,
-                        child: Obx(
-                          () => _InfoCard(
-                            icon: Icons.layers_outlined,
-                            title: 'Total Inventory',
-                            value:
-                                '${inventoryController.items.length} items',
-                          ),
-                        ),
-                      ),
-                      FadeSlide(
-                        index: 2,
                         child: _ActionCard(
                           icon: Icons.person_add_alt_1,
-                          title: 'Add New User',
+                          title: 'Add New Customer',
                           subtitle: 'Create customer',
                           onTap: () => Get.toNamed(AppRoutes.addUser),
                         ),
                       ),
                       FadeSlide(
-                        index: 3,
+                        index: 2,
                         child: _ActionCard(
                           icon: Icons.people_alt_outlined,
-                          title: 'Existing Users',
+                          title: 'Existing Customers',
                           subtitle: 'Select customer',
                           onTap: () => Get.toNamed(AppRoutes.existingUsers),
                         ),
                       ),
                       FadeSlide(
-                        index: 4,
+                        index: 3,
                         child: _ActionCard(
                           icon: Icons.receipt_long_outlined,
                           title: 'Orders History',
@@ -165,55 +152,6 @@ class _ActionCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String value;
-
-  const _InfoCard({
-    required this.icon,
-    required this.title,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassContainer(
-      radius: 22,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            radius: 26,
-            backgroundColor: Colors.white.withOpacity(0.12),
-            child: Icon(icon, color: Colors.white),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70),
-          ),
-        ],
       ),
     );
   }

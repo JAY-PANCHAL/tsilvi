@@ -12,6 +12,9 @@ class InventoryModel extends InventoryEntity {
     super.currency,
     super.color,
     super.size,
+    super.netWeight,
+    super.laborCostPerGm,
+    super.silverPrice,
     super.isInCart,
     required super.images,
   });
@@ -23,19 +26,52 @@ class InventoryModel extends InventoryEntity {
         _toInt(json['productId']) ??
         _toInt(json['code']) ??
         _toInt(resolvedId);
+
+    // Backend field names have not been consistent across list/detail endpoints.
+    // Be permissive here so UI can show Net Wt / Labour rate whenever present.
+    dynamic pickFirst(Iterable<dynamic> candidates) {
+      for (final v in candidates) {
+        if (v == null) continue;
+        if (v is String && v.trim().isEmpty) continue;
+        return v;
+      }
+      return null;
+    }
+
     return InventoryModel(
       id: resolvedId.toString(),
       itemId: resolvedItemId,
       zohoBooksItemId: _toInt(json['zohoBooksItemId']),
       name: (json['name'] ?? json['title'] ?? json['productName'] ?? 'Item')
           .toString(),
-      sku: (json['sku'] ?? json['code'] ?? '').toString(),
+      sku: (json['sku'] ?? json['productSku'] ?? json['itemSku'] ?? '')
+          .toString(),
       description: (json['description'] ?? '').toString(),
       price: _toDouble(
           json['price'] ?? json['unitPrice'] ?? json['finalUnitPrice'] ?? 0),
       currency: (json['currency'] ?? json['currencyCode'] ?? '').toString(),
       color: json['color']?.toString(),
       size: json['size']?.toString(),
+      netWeight: _toNullableDouble(pickFirst([
+        json['netWeight'],
+        json['net_weight'],
+        json['netweight'],
+        json['netWt'],
+        json['net_wt'],
+      ])),
+      laborCostPerGm: _toNullableDouble(pickFirst([
+        json['laborCostPerGm'],
+        json['labourCostPerGm'],
+        json['laborRate'],
+        json['labourRate'],
+        json['laborRatePerGm'],
+        json['labourRatePerGm'],
+      ])),
+      silverPrice: _toNullableDouble(pickFirst([
+        json['silverPrice'],
+        json['silverRate'],
+        json['silver_rate'],
+      ])),
       isInCart: json['isInCart'] == true,
       images: _extractImages(json),
     );
@@ -53,6 +89,9 @@ class InventoryModel extends InventoryEntity {
       'currency': currency,
       'color': color,
       'size': size,
+      'netWeight': netWeight,
+      'laborCostPerGm': laborCostPerGm,
+      'silverPrice': silverPrice,
       'isInCart': isInCart,
       'images': images,
     };
@@ -71,40 +110,58 @@ class InventoryModel extends InventoryEntity {
     return 0;
   }
 
+  static double? _toNullableDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
   static List<String> _extractImages(Map<String, dynamic> json) {
-    final imagesRaw = json['images'];
     final list = <String>[];
-    if (imagesRaw is List) {
-      for (final entry in imagesRaw) {
-        if (entry == null) continue;
-        if (entry is String) {
-          final trimmed = entry.trim();
-          if (trimmed.isNotEmpty) list.add(trimmed);
-          continue;
-        }
-        if (entry is Map) {
-          final mapped = entry['url'] ??
-              entry['imageUrl'] ??
-              entry['image'] ??
-              entry['src'] ??
-              entry['path'];
-          if (mapped != null) {
-            final trimmed = mapped.toString().trim();
-            if (trimmed.isNotEmpty) list.add(trimmed);
+
+    void addRawImages(dynamic raw) {
+      if (raw is List) {
+        for (final entry in raw) {
+          if (entry == null) continue;
+          if (entry is String) {
+            final parts = entry.split(',');
+            for (final part in parts) {
+              final trimmed = part.trim();
+              if (trimmed.isNotEmpty) list.add(trimmed);
+            }
+            continue;
           }
-          continue;
+          if (entry is Map) {
+            final mapped = entry['url'] ??
+                entry['imageUrl'] ??
+                entry['image'] ??
+                entry['src'] ??
+                entry['path'];
+            if (mapped != null) addRawImages(mapped);
+            continue;
+          }
+          final fallback = entry.toString().trim();
+          if (fallback.isNotEmpty) list.add(fallback);
         }
-        final fallback = entry.toString().trim();
-        if (fallback.isNotEmpty) list.add(fallback);
+        return;
       }
-    } else if (imagesRaw is String) {
-      final split = imagesRaw
-          .split(',')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty);
-      list.addAll(split);
+
+      if (raw is String) {
+        final split =
+            raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty);
+        list.addAll(split);
+      }
     }
-    if (list.isNotEmpty) return list;
+
+    addRawImages(json['images']);
+    addRawImages(json['imageMulti']);
+    addRawImages(json['imageUrlMulti']);
+    addRawImages(json['imagemulti']);
+
+    if (list.isNotEmpty) {
+      return list.toSet().toList();
+    }
+
     final imageUrl = json['imageUrl']?.toString() ??
         json['image']?.toString() ??
         json['productImage']?.toString() ??

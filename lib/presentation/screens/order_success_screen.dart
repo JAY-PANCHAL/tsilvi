@@ -3,7 +3,12 @@ import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/utils/app_colors.dart';
+import '../../core/utils/order_share_text.dart';
+import '../../core/utils/toast.dart';
+import '../../domain/entities/order_entity.dart';
 import '../../routes/app_routes.dart';
+import '../controllers/orders_controller.dart';
+import '../controllers/users_controller.dart';
 import '../widgets/glass_button.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/glass_icon_button.dart';
@@ -14,7 +19,13 @@ class OrderSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final orderId = Get.arguments as String? ?? 'ORD-0000';
+    final arg = Get.arguments;
+    final orderFromArg = arg is OrderEntity ? arg : null;
+    final orderFromList = arg is String && Get.isRegistered<OrdersController>()
+        ? Get.find<OrdersController>().orders.firstWhereOrNull((e) => e.id == arg)
+        : null;
+    final order = orderFromArg ?? orderFromList;
+    final orderId = order?.id ?? (arg is String ? arg : 'ORD-0000');
     return Scaffold(
       body: GradientBackground(
         child: SafeArea(
@@ -65,8 +76,8 @@ class OrderSuccessScreen extends StatelessWidget {
                             alignment: Alignment.centerLeft,
                             child: GlassIconButton(
                               icon: Icons.share_outlined,
-                              label: 'Share Order ID',
-                              onTap: () => Share.share('Order ID: $orderId'),
+                              label: 'Share Order Details',
+                              onTap: () => _shareOrder(order, orderId),
                               fullWidth: true,
                               maxWidth: max,
                             ),
@@ -95,5 +106,25 @@ class OrderSuccessScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _shareOrder(OrderEntity? order, String orderId) async {
+    try {
+      if (order == null) {
+        await SharePlus.instance.share(
+          ShareParams(text: 'Order ID: $orderId'),
+        );
+        return;
+      }
+      final selectedUser =
+          Get.isRegistered<UsersController>() ? Get.find<UsersController>().selectedUser.value : null;
+      final customerName =
+          (selectedUser?.name.trim().isNotEmpty ?? false) ? selectedUser!.name.trim() : 'Customer';
+      await SharePlus.instance.share(
+        ShareParams(text: buildOrderShareText(order, customerName: customerName)),
+      );
+    } catch (_) {
+      showToast('Unable to share order right now', success: false);
+    }
   }
 }

@@ -43,7 +43,7 @@ class _ExistingUsersScreenState extends State<ExistingUsersScreen> {
                     ),
                     const Expanded(
                       child: Text(
-                        'Existing Users',
+                        'Existing Customers',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w600,

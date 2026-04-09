@@ -2,7 +2,6 @@ import '../../domain/entities/order_entity.dart';
 import '../../domain/repositories/order_repository.dart';
 import '../datasources/api_service.dart';
 import '../models/order_model.dart';
-import '../models/order_model.dart';
 
 class OrderRepositoryImpl implements OrderRepository {
   final ApiService api;
@@ -21,20 +20,39 @@ class OrderRepositoryImpl implements OrderRepository {
   Future<OrderEntity> createOrder(OrderEntity order) async {
     final model = OrderModel(
       id: order.id,
+      customerId: order.customerId,
       date: order.date,
       total: order.total,
       items: order.items,
     );
-    final body = {
-      ...model.toJson(),
-      'customerId': 117,
-    };
-    final data = await api.post('/order/create', body: body);
+    final data = await api.post('/order/create', body: model.toJson());
     if (!_isSuccess(data)) {
       final msg = _extractMessage(data) ?? 'Unable to place order';
       throw Exception(msg);
     }
     if (data is Map<String, dynamic>) {
+      // Create order response is usually wrapped as:
+      // { success, message, orderId, order: { ...actualOrder... } }
+      Map<String, dynamic>? orderNode;
+      final nestedOrder = data['order'];
+      if (nestedOrder is Map) {
+        orderNode = Map<String, dynamic>.from(nestedOrder);
+      } else {
+        final dataNode = data['data'];
+        if (dataNode is Map) {
+          final nested = dataNode['order'];
+          if (nested is Map) {
+            orderNode = Map<String, dynamic>.from(nested);
+          } else {
+            orderNode = Map<String, dynamic>.from(dataNode);
+          }
+        }
+      }
+      if (orderNode != null) {
+        // Ensure we keep orderId even if backend sends it only at the top level.
+        orderNode['orderId'] ??= data['orderId'] ?? data['id'];
+        return OrderModel.fromJson(orderNode);
+      }
       return OrderModel.fromJson(data);
     }
     return model;

@@ -12,7 +12,7 @@ import 'package:tsilvi/main.dart';
 
 void main() {
   testWidgets('App boots smoke test', (WidgetTester tester) async {
-    await tester.pumpWidget(const TsilviApp());
+    await tester.pumpWidget(const TsiliviApp());
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.byType(WidgetsApp), findsOneWidget);
   });

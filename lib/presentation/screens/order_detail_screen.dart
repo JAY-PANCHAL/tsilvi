@@ -4,8 +4,11 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/utils/app_colors.dart';
+import '../../core/utils/order_share_text.dart';
 import '../../core/utils/price_format.dart';
+import '../../core/utils/toast.dart';
 import '../../domain/entities/order_entity.dart';
+import '../controllers/users_controller.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/glass_icon_button.dart';
 import '../widgets/gradient_background.dart';
@@ -78,6 +81,34 @@ class OrderDetailScreen extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
+                      if ((order.sku ?? '').trim().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'SKU: ${order.sku}',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ],
+                      if (order.totalNetWeight != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Total Net Weight: ${order.totalNetWeight!.toStringAsFixed(3)} g',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ],
+                     /* if (order.silverPrice != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Silver Price: ${formatCurrency(order.silverPrice!, currency: "INR", fractionDigits: 2)}',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ],*/
+                      if (order.laborCostPerGm != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Labor Cost Per Gm: ${formatCurrency(order.laborCostPerGm!, currency: "INR", fractionDigits: 2)}',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ],
                       const SizedBox(height: 14),
                       if (order.id.trim().isNotEmpty)
                         LayoutBuilder(
@@ -89,7 +120,7 @@ class OrderDetailScreen extends StatelessWidget {
                               child: GlassIconButton(
                                 icon: Icons.share_outlined,
                                 label: 'Share Order',
-                                onTap: () => Share.share(_shareText(order, date)),
+                                onTap: () => _shareOrder(order),
                                 fullWidth: true,
                                 maxWidth: max,
                               ),
@@ -115,44 +146,62 @@ class OrderDetailScreen extends StatelessWidget {
                             const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final item = order.items[index];
+                          final money = NumberFormat.currency(
+                            locale: 'en_IN',
+                            symbol: '₹',
+                            decimalDigits: 2,
+                          );
                           return FadeSlide(
                             index: index,
                             child: GlassContainer(
                               radius: 18,
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: _OrderItemImage(urls: item.item.images),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.item.name,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          'Qty: ${item.quantity}',
-                                          style: TextStyle(
-                                              color: AppColors.textSecondary),
-                                        ),
-                                      ],
+                                  Center(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: _OrderItemImage(urls: item.item.images),
                                     ),
                                   ),
+                                  const SizedBox(height: 12),
                                   Text(
-                                    formatCurrency(
-                                      item.item.price * item.quantity,
-                                      currency: item.item.currency,
-                                      fractionDigits: 0,
+                                    item.item.name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
                                     ),
+                                  ),
+                                  if (item.item.sku.trim().isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'SKU: ${item.item.sku}',
+                                      style: TextStyle(color: AppColors.textSecondary),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Qty: ${item.quantity}',
+                                    style: TextStyle(color: AppColors.textSecondary),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Net Weight: ${item.item.netWeight != null ? item.item.netWeight!.toStringAsFixed(3) : "-"} g',
+                                    style: TextStyle(color: AppColors.textSecondary),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Labour Rate: ${item.item.laborCostPerGm != null ? money.format(item.item.laborCostPerGm) : "-"}',
+                                    style: TextStyle(color: AppColors.textSecondary),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Silver Price: ${item.item.silverPrice != null ? money.format(item.item.silverPrice) : "-"}',
+                                    style: TextStyle(color: AppColors.textSecondary),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Total: ${formatCurrency(item.item.price * item.quantity, currency: item.item.currency, fractionDigits: 2)}',
                                     style: const TextStyle(
                                       color: Colors.white70,
                                       fontWeight: FontWeight.w600,
@@ -172,13 +221,22 @@ class OrderDetailScreen extends StatelessWidget {
     );
   }
 
-  String _shareText(OrderEntity order, String date) {
-    final itemsText = order.items
-        .map((e) => '${e.item.name} x${e.quantity}')
-        .join(', ');
-    final currency =
-        order.items.isNotEmpty ? order.items.first.item.currency : '';
-    return 'Order ID: ${order.id}\nDate: $date\nItems: $itemsText\nTotal: ${formatCurrency(order.total, currency: currency, fractionDigits: 2)}';
+  String _shareText(OrderEntity order) {
+    final selectedUser =
+        Get.isRegistered<UsersController>() ? Get.find<UsersController>().selectedUser.value : null;
+    final customerName =
+        (selectedUser?.name.trim().isNotEmpty ?? false) ? selectedUser!.name.trim() : 'Customer';
+    return buildOrderShareText(order, customerName: customerName);
+  }
+
+  Future<void> _shareOrder(OrderEntity order) async {
+    try {
+      await SharePlus.instance.share(
+        ShareParams(text: _shareText(order)),
+      );
+    } catch (_) {
+      showToast('Unable to share order right now', success: false);
+    }
   }
 }
 
@@ -194,8 +252,8 @@ class _OrderItemImage extends StatelessWidget {
     }
     return Image.network(
       urls.first,
-      width: 56,
-      height: 56,
+      width: 84,
+      height: 84,
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => _fallback(),
     );
@@ -203,8 +261,8 @@ class _OrderItemImage extends StatelessWidget {
 
   Widget _fallback() {
     return Container(
-      width: 56,
-      height: 56,
+      width: 84,
+      height: 84,
       color: Colors.white.withOpacity(0.12),
       child: const Icon(Icons.image_not_supported_outlined,
           color: Colors.white70, size: 22),

@@ -24,6 +24,7 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   bool _showDetails = false;
+  bool _didAutoLeaveEmptyCart = false;
 
   @override
   void initState() {
@@ -122,13 +123,24 @@ class _CartScreenState extends State<CartScreen> {
                         ),
                       );
                     }
-                    if (cartController.items.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'Your cart is empty',
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                      );
+                    // If cart becomes empty, send user back to inventory to keep
+                    // the flow intact (especially after deleting the last item).
+                    if (!cartController.isLoading.value &&
+                        !cartController.isUpdating.value &&
+                        cartController.items.isEmpty) {
+                      if (!_didAutoLeaveEmptyCart) {
+                        _didAutoLeaveEmptyCart = true;
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted) return;
+                          if (Get.currentRoute == AppRoutes.cart) {
+                            Get.offNamed(AppRoutes.inventory);
+                          }
+                        });
+                      }
+                      return const SizedBox.shrink();
+                    }
+                    if (cartController.items.isNotEmpty) {
+                      _didAutoLeaveEmptyCart = false;
                     }
                     final user = usersController.selectedUser.value;
                     final headerCount = user == null ? 0 : 1;
@@ -243,8 +255,9 @@ class _CartScreenState extends State<CartScreen> {
                                 await cartController.decrement(item.item),
                             onPlus: () async =>
                                 await cartController.increment(item.item),
-                            onQuantity: (qty) =>
-                                cartController.setQuantity(item.item, qty),
+                            onQuantity: (qty) {
+                              cartController.setQuantity(item.item, qty);
+                            },
                           ),
                         );
                       },
@@ -290,26 +303,43 @@ class _CartScreenState extends State<CartScreen> {
                             ),
                           ),
                           if (_showDetails) ...[
-                            _TotalRow(
-                              label: 'Subtotal',
-                              value: cartController.subtotal.value,
-                            ),
-                            _TotalRow(
-                              label: 'Product Discount',
-                              value: cartController.productDiscountTotal.value,
-                            ),
-                            _TotalRow(
-                              label: 'Coupon Discount',
-                              value: cartController.couponDiscount.value,
-                            ),
-                            _TotalRow(
-                              label: 'Tax',
-                              value: cartController.taxAmount.value,
-                            ),
-                            _TotalRow(
-                              label: 'Shipping',
-                              value: cartController.shippingAmount.value,
-                            ),
+                            if (cartController.subtotal.value > 0)
+                              _TotalRow(
+                                label: 'Subtotal',
+                                value: cartController.subtotal.value,
+                              ),
+                            if (cartController.totalLaborCost.value > 0)
+                              _TotalRow(
+                                label: 'Total Labour Cost',
+                                value: cartController.totalLaborCost.value,
+                              ),
+                            if (cartController.totalNetWeight.value > 0)
+                              _ValueRow(
+                                label: 'Total Net Weight',
+                                value:
+                                    '${cartController.totalNetWeight.value.toStringAsFixed(3)} g',
+                              ),
+                            if (cartController.productDiscountTotal.value > 0)
+                              _TotalRow(
+                                label: 'Product Discount',
+                                value:
+                                    cartController.productDiscountTotal.value,
+                              ),
+                            if (cartController.couponDiscount.value > 0)
+                              _TotalRow(
+                                label: 'Coupon Discount',
+                                value: cartController.couponDiscount.value,
+                              ),
+                            if (cartController.taxAmount.value > 0)
+                              _TotalRow(
+                                label: 'Tax',
+                                value: cartController.taxAmount.value,
+                              ),
+                            if (cartController.shippingAmount.value > 0)
+                              _TotalRow(
+                                label: 'Shipping',
+                                value: cartController.shippingAmount.value,
+                              ),
                           ],
                           const SizedBox(height: 12),
                           GlassButton(
@@ -318,14 +348,28 @@ class _CartScreenState extends State<CartScreen> {
                               if (cartController.items.isEmpty) return;
                               if (!usersController.hasSelectedUser) return;
                               try {
+                                final selectedUser =
+                                    usersController.selectedUser.value;
+                                final customerId = selectedUser == null
+                                    ? null
+                                    : (int.tryParse(selectedUser.id) ??
+                                        selectedUser.id);
+                                if (customerId == null) {
+                                  showToast(
+                                    'Please select a customer',
+                                    success: false,
+                                  );
+                                  return;
+                                }
                                 final order =
                                     await ordersController.createOrder(
                                   cartController.items,
                                   cartController.total,
+                                  customerId: customerId,
                                 );
                                 cartController.clear();
                                 Get.toNamed(AppRoutes.success,
-                                    arguments: order.id);
+                                    arguments: order);
                               } catch (e) {
                                 final msg = e.toString().replaceFirst(
                                     'Exception: ', '');
@@ -398,10 +442,15 @@ class _CartItemCardState extends State<_CartItemCard> {
 
   @override
   Widget build(BuildContext context) {
+    final displaySku = widget.item.item.sku.trim().isNotEmpty
+        ? widget.item.item.sku.trim()
+        : (widget.item.item.itemId?.toString() ??
+            int.tryParse(widget.item.item.id)?.toString() ??
+            '');
     return PressableScale(
       child: GlassContainer(
         radius: 20,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Row(
           children: [
             ClipRRect(
@@ -409,12 +458,12 @@ class _CartItemCardState extends State<_CartItemCard> {
               child: widget.item.item.images.isNotEmpty
                   ? Image.network(
                       widget.item.item.images.first,
-                      width: 64,
-                      height: 64,
+                      width: 72,
+                      height: 72,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
-                        width: 64,
-                        height: 64,
+                        width: 72,
+                        height: 72,
                         color: Colors.white12,
                         alignment: Alignment.center,
                         child: const Icon(Icons.image_not_supported,
@@ -422,8 +471,8 @@ class _CartItemCardState extends State<_CartItemCard> {
                       ),
                     )
                   : Container(
-                      width: 64,
-                      height: 64,
+                      width: 72,
+                      height: 72,
                       color: Colors.white12,
                       alignment: Alignment.center,
                       child: const Icon(Icons.image_not_supported,
@@ -445,10 +494,41 @@ class _CartItemCardState extends State<_CartItemCard> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    widget.item.item.sku,
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
+                  if (displaySku.isNotEmpty)
+                    Text(
+                      'SKU: $displaySku',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  if (widget.item.item.netWeight != null ||
+                      widget.item.item.laborCostPerGm != null) ...[
+                    const SizedBox(height: 4),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (widget.item.item.netWeight != null)
+                          Text(
+                            'Net Wt: ${widget.item.item.netWeight!.toStringAsFixed(3)} g',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                        if (widget.item.item.laborCostPerGm != null)
+                          Text(
+                            'Labour rate: ${formatCurrency(widget.item.item.laborCostPerGm!, currency: "INR", fractionDigits: 0)}/gm',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                        if (widget.item.item.silverPrice != null)
+                          Text(
+                            'Silver: ${formatCurrency(widget.item.item.silverPrice!, currency: "INR", fractionDigits: 0)}/gm',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                      ],
+                    ),
+                  ],
                   if ((widget.item.item.color ?? '').isNotEmpty ||
                       (widget.item.item.size ?? '').isNotEmpty) ...[
                     const SizedBox(height: 4),
@@ -463,25 +543,32 @@ class _CartItemCardState extends State<_CartItemCard> {
                     ),
                   ],
                   const SizedBox(height: 8),
-                  Text(
-                    formatCurrency(
-                      widget.item.item.price,
-                      currency: widget.item.item.currency,
-                      fractionDigits: 0,
-                    ),
-                    style: const TextStyle(color: Colors.white70),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          formatCurrency(
+                            widget.item.item.price,
+                            currency: widget.item.item.currency,
+                            fractionDigits: 0,
+                          ),
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                      ),
+                      _QuantityControl(
+                        controller: _controller,
+                        onMinus: widget.onMinus,
+                        onPlus: widget.onPlus,
+                        onChanged: (value) {
+                          final qty =
+                              int.tryParse(value) ?? widget.item.quantity;
+                          widget.onQuantity(qty);
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ),
-            _QuantityControl(
-              controller: _controller,
-              onMinus: widget.onMinus,
-              onPlus: widget.onPlus,
-              onChanged: (value) {
-                final qty = int.tryParse(value) ?? widget.item.quantity;
-                widget.onQuantity(qty);
-              },
             ),
           ],
         ),
@@ -576,6 +663,43 @@ class _TotalRow extends StatelessWidget {
               color: Colors.white,
               fontSize: isEmphasis ? 18 : 14,
               fontWeight: isEmphasis ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ValueRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _ValueRow({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],

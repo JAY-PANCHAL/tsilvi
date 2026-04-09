@@ -119,8 +119,10 @@ class InventoryController extends GetxController {
       showToast('No item found for SKU $sku', success: false);
       return;
     }
-    items.removeWhere((e) => e.id == item.id);
-    items.insert(0, item);
+    // Replace previous SKU search results with the latest matched item.
+    items.assignAll([item]);
+    page.value = 1;
+    hasMore.value = false;
     showToast('Found ${item.name}');
   }
 
