@@ -24,6 +24,7 @@ class UserRepositoryImpl implements UserRepository {
       'fullName': user.name,
       'mobile': user.mobile,
       'email': user.email,
+      'businessName': user.businessName,
       'userType': 1,
       'createdBy': 1,
     };

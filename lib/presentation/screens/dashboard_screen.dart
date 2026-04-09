@@ -67,7 +67,7 @@ class DashboardScreen extends StatelessWidget {
                         index: 0,
                         child: _ActionCard(
                           icon: Icons.inventory_2_outlined,
-                          title: 'Inventory',
+                          title: 'Book Orders',
                           subtitle: 'Browse products',
                           onTap: () => Get.toNamed(AppRoutes.inventory),
                         ),
@@ -85,7 +85,7 @@ class DashboardScreen extends StatelessWidget {
                         index: 2,
                         child: _ActionCard(
                           icon: Icons.people_alt_outlined,
-                          title: 'Existing Customers',
+                          title: 'Customers List',
                           subtitle: 'Select customer',
                           onTap: () => Get.toNamed(AppRoutes.existingUsers),
                         ),
@@ -94,7 +94,7 @@ class DashboardScreen extends StatelessWidget {
                         index: 3,
                         child: _ActionCard(
                           icon: Icons.receipt_long_outlined,
-                          title: 'Orders History',
+                          title: 'Orders Hstory',
                           subtitle: 'Track orders',
                           onTap: () => Get.toNamed(AppRoutes.orders),
                         ),

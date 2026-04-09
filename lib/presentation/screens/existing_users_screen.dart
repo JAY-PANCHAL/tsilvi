@@ -3,11 +3,9 @@ import 'package:get/get.dart';
 
 import '../../core/utils/app_colors.dart';
 import '../../domain/entities/user_entity.dart';
-import '../../routes/app_routes.dart';
 import '../controllers/users_controller.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/gradient_background.dart';
-import '../widgets/pressable_scale.dart';
 import '../widgets/shimmer_loader.dart';
 
 class ExistingUsersScreen extends StatefulWidget {
@@ -86,12 +84,6 @@ class _ExistingUsersScreenState extends State<ExistingUsersScreen> {
                         final user = usersController.users[index];
                         return _UserCard(
                           user: user,
-                          onTap: () {
-                            usersController.selectUser(user);
-                            if (Get.currentRoute != AppRoutes.inventory) {
-                              Get.offNamed(AppRoutes.inventory);
-                            }
-                          },
                         );
                       },
                     );
@@ -108,52 +100,53 @@ class _ExistingUsersScreenState extends State<ExistingUsersScreen> {
 
 class _UserCard extends StatelessWidget {
   final UserEntity user;
-  final VoidCallback onTap;
 
-  const _UserCard({required this.user, required this.onTap});
+  const _UserCard({required this.user});
 
   @override
   Widget build(BuildContext context) {
-    return PressableScale(
-      onTap: onTap,
-      child: GlassContainer(
-        radius: 20,
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: Colors.white.withOpacity(0.12),
-              child: const Icon(Icons.person_outline, color: Colors.white),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
+    return GlassContainer(
+      radius: 20,
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: Colors.white.withOpacity(0.12),
+            child: const Icon(Icons.person_outline, color: Colors.white),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
                   ),
+                ),
+                if (user.businessName.trim().isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(
-                    user.mobile,
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user.email,
+                    user.businessName,
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
                 ],
+                const SizedBox(height: 6),
+                Text(
+                  user.mobile,
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  user.email,
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios,
-                size: 14, color: Colors.white70),
-          ],
-        ),
+        ],
       ),
     );
   }

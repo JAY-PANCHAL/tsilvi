@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 
 import '../../core/utils/app_colors.dart';
 import '../../domain/entities/user_entity.dart';
-import '../../routes/app_routes.dart';
 import '../controllers/users_controller.dart';
 import '../../core/utils/toast.dart';
 import '../widgets/glass_button.dart';
@@ -133,9 +132,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                           try {
                             final created = await usersController.addUser(user);
                             usersController.selectUser(created);
-                            if (Get.currentRoute != AppRoutes.inventory) {
-                              Get.offNamed(AppRoutes.inventory);
-                            }
+                            Get.back(result: created);
                           } finally {
                             if (mounted) {
                               setState(() => _isSubmitting = false);
