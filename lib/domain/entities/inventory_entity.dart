@@ -10,6 +10,7 @@ class InventoryEntity {
   final String? color;
   final String? size;
   final double? netWeight;
+  final double? laborCost;
   final double? laborCostPerGm;
   final double? silverPrice;
   final bool isInCart;
@@ -27,6 +28,7 @@ class InventoryEntity {
     this.color,
     this.size,
     this.netWeight,
+    this.laborCost,
     this.laborCostPerGm,
     this.silverPrice,
     this.isInCart = false,

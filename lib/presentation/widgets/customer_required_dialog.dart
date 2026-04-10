@@ -55,7 +55,10 @@ Future<void> showCustomerRequiredDialog() async {
                 label: 'Choose Existing',
                 onTap: () {
                   Get.back();
-                  Get.toNamed(AppRoutes.existingUsers);
+                  Get.toNamed(
+                    AppRoutes.existingUsers,
+                    arguments: {'allowSelection': true},
+                  );
                 },
               ),
             ],

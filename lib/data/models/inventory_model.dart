@@ -13,6 +13,7 @@ class InventoryModel extends InventoryEntity {
     super.color,
     super.size,
     super.netWeight,
+    super.laborCost,
     super.laborCostPerGm,
     super.silverPrice,
     super.isInCart,
@@ -59,6 +60,12 @@ class InventoryModel extends InventoryEntity {
         json['netWt'],
         json['net_wt'],
       ])),
+      laborCost: _toNullableDouble(pickFirst([
+        json['laborCost'],
+        json['labourCost'],
+        json['labor_cost'],
+        json['labour_cost'],
+      ])),
       laborCostPerGm: _toNullableDouble(pickFirst([
         json['laborCostPerGm'],
         json['labourCostPerGm'],
@@ -90,6 +97,7 @@ class InventoryModel extends InventoryEntity {
       'color': color,
       'size': size,
       'netWeight': netWeight,
+      'laborCost': laborCost,
       'laborCostPerGm': laborCostPerGm,
       'silverPrice': silverPrice,
       'isInCart': isInCart,
@@ -119,6 +127,18 @@ class InventoryModel extends InventoryEntity {
   static List<String> _extractImages(Map<String, dynamic> json) {
     final list = <String>[];
 
+    String? normalizeUrl(dynamic raw) {
+      if (raw == null) return null;
+      final value = raw.toString().trim();
+      if (value.isEmpty) return null;
+      // Some backend URLs contain spaces (e.g. "... (1).jpg") which must be
+      // percent-encoded for consistent loading across Android versions.
+      if (value.contains(' ')) {
+        return Uri.encodeFull(value);
+      }
+      return value;
+    }
+
     void addRawImages(dynamic raw) {
       if (raw is List) {
         for (final entry in raw) {
@@ -126,8 +146,8 @@ class InventoryModel extends InventoryEntity {
           if (entry is String) {
             final parts = entry.split(',');
             for (final part in parts) {
-              final trimmed = part.trim();
-              if (trimmed.isNotEmpty) list.add(trimmed);
+              final normalized = normalizeUrl(part);
+              if (normalized != null) list.add(normalized);
             }
             continue;
           }
@@ -136,12 +156,19 @@ class InventoryModel extends InventoryEntity {
                 entry['imageUrl'] ??
                 entry['image'] ??
                 entry['src'] ??
-                entry['path'];
-            if (mapped != null) addRawImages(mapped);
+                entry['path'] ??
+                entry['webMedia'] ??
+                entry['mobMedia'];
+            if (mapped != null) {
+              addRawImages(mapped);
+            } else {
+              final normalized = normalizeUrl(entry.toString());
+              if (normalized != null) list.add(normalized);
+            }
             continue;
           }
-          final fallback = entry.toString().trim();
-          if (fallback.isNotEmpty) list.add(fallback);
+          final normalized = normalizeUrl(entry);
+          if (normalized != null) list.add(normalized);
         }
         return;
       }
@@ -149,7 +176,10 @@ class InventoryModel extends InventoryEntity {
       if (raw is String) {
         final split =
             raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty);
-        list.addAll(split);
+        for (final entry in split) {
+          final normalized = normalizeUrl(entry);
+          if (normalized != null) list.add(normalized);
+        }
       }
     }
 
@@ -157,16 +187,17 @@ class InventoryModel extends InventoryEntity {
     addRawImages(json['imageMulti']);
     addRawImages(json['imageUrlMulti']);
     addRawImages(json['imagemulti']);
+    addRawImages(json['productMedias']);
+    addRawImages(json['productMedia']);
 
     if (list.isNotEmpty) {
       return list.toSet().toList();
     }
 
-    final imageUrl = json['imageUrl']?.toString() ??
-        json['image']?.toString() ??
-        json['productImage']?.toString() ??
-        '';
-    if (imageUrl.isNotEmpty) return [imageUrl];
+    final imageUrl = normalizeUrl(json['imageUrl']) ??
+        normalizeUrl(json['image']) ??
+        normalizeUrl(json['productImage']);
+    if (imageUrl != null) return [imageUrl];
     return [];
   }
 }

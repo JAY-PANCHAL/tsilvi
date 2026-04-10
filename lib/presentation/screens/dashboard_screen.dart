@@ -87,7 +87,10 @@ class DashboardScreen extends StatelessWidget {
                           icon: Icons.people_alt_outlined,
                           title: 'Customers List',
                           subtitle: 'Select customer',
-                          onTap: () => Get.toNamed(AppRoutes.existingUsers),
+                          onTap: () => Get.toNamed(
+                            AppRoutes.existingUsers,
+                            arguments: {'allowSelection': false},
+                          ),
                         ),
                       ),
                       FadeSlide(

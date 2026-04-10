@@ -6,6 +6,7 @@ import '../../domain/entities/user_entity.dart';
 import '../controllers/users_controller.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/gradient_background.dart';
+import '../widgets/pressable_scale.dart';
 import '../widgets/shimmer_loader.dart';
 
 class ExistingUsersScreen extends StatefulWidget {
@@ -16,6 +17,11 @@ class ExistingUsersScreen extends StatefulWidget {
 }
 
 class _ExistingUsersScreenState extends State<ExistingUsersScreen> {
+  bool get _allowSelection {
+    final args = Get.arguments;
+    return args is Map && args['allowSelection'] == true;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -84,6 +90,12 @@ class _ExistingUsersScreenState extends State<ExistingUsersScreen> {
                         final user = usersController.users[index];
                         return _UserCard(
                           user: user,
+                          onTap: _allowSelection
+                              ? () {
+                                  usersController.selectUser(user);
+                                  Get.back(result: user);
+                                }
+                              : null,
                         );
                       },
                     );
@@ -100,12 +112,13 @@ class _ExistingUsersScreenState extends State<ExistingUsersScreen> {
 
 class _UserCard extends StatelessWidget {
   final UserEntity user;
+  final VoidCallback? onTap;
 
-  const _UserCard({required this.user});
+  const _UserCard({required this.user, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return GlassContainer(
+    final card = GlassContainer(
       radius: 20,
       child: Row(
         children: [
@@ -144,10 +157,19 @@ class _UserCard extends StatelessWidget {
                   style: TextStyle(color: AppColors.textSecondary),
                 ),
               ],
-              ),
+            ),
+          ),
+          if (onTap != null)
+            const Padding(
+              padding: EdgeInsets.only(left: 8),
+              child: Icon(Icons.arrow_forward_ios,
+                  size: 14, color: Colors.white70),
             ),
         ],
       ),
     );
+
+    if (onTap == null) return card;
+    return PressableScale(onTap: onTap, child: card);
   }
 }

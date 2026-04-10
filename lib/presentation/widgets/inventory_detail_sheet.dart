@@ -118,7 +118,7 @@ class InventoryDetailSheet extends StatelessWidget {
                         ),
                       if (item.silverPrice != null)
                         _DetailLine(
-                          label: 'Silver Rate / gm',
+                          label: 'Silver Price / gm',
                           value: formatCurrency(
                             item.silverPrice!,
                             currency: 'INR',

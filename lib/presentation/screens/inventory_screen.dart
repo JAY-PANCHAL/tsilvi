@@ -498,7 +498,8 @@ class _InventoryCardState extends State<_InventoryCard> {
                         ),
                       ],
                       if (widget.item.netWeight != null ||
-                          widget.item.laborCostPerGm != null) ...[
+                          widget.item.laborCostPerGm != null ||
+                          widget.item.silverPrice != null) ...[
                         SizedBox(height: gapSm),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -516,6 +517,16 @@ class _InventoryCardState extends State<_InventoryCard> {
                             if (widget.item.laborCostPerGm != null)
                               Text(
                                 'Labour rate: ${formatCurrency(widget.item.laborCostPerGm!, currency: "INR", fractionDigits: 0)}/gm',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: metaFontSize,
+                                ),
+                              ),
+                            if (widget.item.silverPrice != null)
+                              Text(
+                                'Silver: ${formatCurrency(widget.item.silverPrice!, currency: "INR", fractionDigits: 0)}/gm',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(

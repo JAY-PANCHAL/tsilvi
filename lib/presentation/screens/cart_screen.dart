@@ -114,7 +114,9 @@ class _CartScreenState extends State<CartScreen> {
                                   GlassButton(
                                     label: 'Choose Existing',
                                     onTap: () => Get.toNamed(
-                                        AppRoutes.existingUsers),
+                                      AppRoutes.existingUsers,
+                                      arguments: {'allowSelection': true},
+                                    ),
                                   ),
                                 ],
                               ),
@@ -222,7 +224,10 @@ class _CartScreenState extends State<CartScreen> {
                                 ),
                                 TextButton(
                                   onPressed: () =>
-                                      Get.toNamed(AppRoutes.existingUsers),
+                                      Get.toNamed(
+                                    AppRoutes.existingUsers,
+                                    arguments: {'allowSelection': true},
+                                  ),
                                   child: const Text(
                                     'Change',
                                     style: TextStyle(
@@ -500,7 +505,8 @@ class _CartItemCardState extends State<_CartItemCard> {
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
                   if (widget.item.item.netWeight != null ||
-                      widget.item.item.laborCostPerGm != null) ...[
+                      widget.item.item.laborCostPerGm != null ||
+                      widget.item.item.silverPrice != null) ...[
                     const SizedBox(height: 4),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
